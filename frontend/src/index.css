@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7fa;
+  color: #19344a;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.admin-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  background: #f5f7fa;
+}
+
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-content {
+  flex: 1;
+  width: 100%;
+  overflow-x: hidden;
+  background: #f5f7fa;
+}
+
+.admin-content-inner {
+  width: min(100% - 48px, 1000px);
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1100px) {
+  .admin-content-inner {
+    width: calc(100% - 40px);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-content-inner {
+    width: calc(100% - 28px);
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-content-inner {
+    width: calc(100% - 20px);
+  }
+}
