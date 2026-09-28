@@ -19,7 +19,7 @@ function IconeRetour() {
   )
 }
 
-function AjouterProduit({ onNavigate }) {
+function AjouterProduit({ onNavigate, onDeconnexion }) {
   const [designation, setDesignation] = useState('')
   const [typeProduit, setTypeProduit] = useState('')
   const [produitCree, setProduitCree] = useState(false)
@@ -68,6 +68,7 @@ function AjouterProduit({ onNavigate }) {
       pageActive="marchandises"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{

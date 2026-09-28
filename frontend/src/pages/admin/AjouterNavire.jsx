@@ -77,7 +77,7 @@ function IconeNumero() {
   )
 }
 
-function AjouterNavire({ onNavigate }) {
+function AjouterNavire({ onNavigate, onDeconnexion }) {
   const [nomNavire, setNomNavire] = useState('')
   const [numeroNavire, setNumeroNavire] = useState('')
   const [message, setMessage] = useState('')
@@ -213,6 +213,7 @@ function AjouterNavire({ onNavigate }) {
       pageActive="navires"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{

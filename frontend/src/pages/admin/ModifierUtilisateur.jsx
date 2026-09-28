@@ -22,6 +22,7 @@ function IconeRetour() {
 function ModifierUtilisateur({
   utilisateur,
   onNavigate,
+  onDeconnexion,
 }) {
   const partiesNom = utilisateur.nom.split(' ')
 
@@ -93,6 +94,7 @@ function ModifierUtilisateur({
       pageActive="utilisateurs"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{
@@ -365,6 +367,10 @@ function ModifierUtilisateur({
                 cursor: 'pointer',
               }}
             >
+              <option value={1}>
+                Administrateur
+              </option>
+
               <option value={2}>
                 Chef Magasinier
               </option>

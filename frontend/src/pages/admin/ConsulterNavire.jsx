@@ -21,12 +21,14 @@ function IconeRetour() {
 function ConsulterNavire({
   navire,
   onNavigate,
+  onDeconnexion,
 }) {
   return (
     <AdminLayout
       pageActive="navires"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{

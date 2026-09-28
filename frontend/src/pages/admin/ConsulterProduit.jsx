@@ -21,12 +21,14 @@ function IconeRetour() {
 function ConsulterProduit({
   produit,
   onNavigate,
+  onDeconnexion,
 }) {
   return (
     <AdminLayout
       pageActive="marchandises"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{

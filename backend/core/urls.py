@@ -8,6 +8,7 @@ from .views import (
     NavireViewSet,
     ProduitViewSet,
     ProduitNavireViewSet,
+    FicheJournaliereViewSet,
     DetailDechargementViewSet,
     login,
     logout,
@@ -22,6 +23,7 @@ router.register(r'utilisateurs', UtilisateurViewSet)
 router.register(r'navires', NavireViewSet)
 router.register(r'produits', ProduitViewSet)
 router.register(r'produits-navire', ProduitNavireViewSet)
+router.register(r'fiches-journalieres', FicheJournaliereViewSet)
 router.register(r'details-dechargement', DetailDechargementViewSet)
 
 

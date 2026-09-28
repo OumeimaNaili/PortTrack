@@ -56,7 +56,10 @@ function IconeOeil() {
   )
 }
 
-function AjouterUtilisateur({ onNavigate }) {
+function AjouterUtilisateur({
+  onNavigate,
+  onDeconnexion,
+}) {
   const [motDePasseVisible, setMotDePasseVisible] = useState(false)
 
   const [nom, setNom] = useState('')
@@ -134,7 +137,28 @@ function AjouterUtilisateur({ onNavigate }) {
     setMessage('')
     setMessageType('')
 
+    // Vérification du mot de passe
+    const contientLettre = /[A-Za-z]/.test(motDePasse)
+    const contientNombre = /[0-9]/.test(motDePasse)
+
+    if (motDePasse.length < 6) {
+      setMessage(
+        'Le mot de passe doit contenir au moins 6 caractères.'
+      )
+      setMessageType('error')
+      return
+    }
+
+    if (!contientLettre || !contientNombre) {
+      setMessage(
+        'Le mot de passe doit contenir des lettres et des nombres.'
+      )
+      setMessageType('error')
+      return
+    }
+
     const profils = {
+      'Administrateur': 1,
       'Chef Magasinier': 2,
       'Responsable des Opérations': 3,
       'Directeur': 4,
@@ -213,6 +237,7 @@ function AjouterUtilisateur({ onNavigate }) {
       pageActive="utilisateurs"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{
@@ -612,6 +637,10 @@ function AjouterUtilisateur({ onNavigate }) {
             >
               <option value="" disabled>
                 Sélectionner un profil d'autorisation...
+              </option>
+
+              <option value="Administrateur">
+                Administrateur
               </option>
 
               <option value="Chef Magasinier">

@@ -2,7 +2,7 @@ function Icone({ type, active = false }) {
   const couleur = active ? '#0F2942' : '#8FA6BF'
 
   const icones = {
-    tableauDeBord: (
+    suiviDechargement: (
       <svg
         width="17"
         height="17"
@@ -11,14 +11,13 @@ function Icone({ type, active = false }) {
         stroke={couleur}
         strokeWidth="1.8"
       >
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <path d="M3 18h18" />
+        <path d="M5 18V9l7-5 7 5v9" />
+        <path d="M9 18v-5h6v5" />
       </svg>
     ),
 
-    utilisateurs: (
+    fichesJournalieres: (
       <svg
         width="17"
         height="17"
@@ -27,14 +26,15 @@ function Icone({ type, active = false }) {
         stroke={couleur}
         strokeWidth="1.8"
       >
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        <path d="M6 3h9l3 3v15H6V3Z" />
+        <path d="M14 3v4h4" />
+        <path d="M9 11h6" />
+        <path d="M9 15h6" />
+        <path d="M9 19h4" />
       </svg>
     ),
 
-    navires: (
+    historique: (
       <svg
         width="17"
         height="17"
@@ -43,37 +43,9 @@ function Icone({ type, active = false }) {
         stroke={couleur}
         strokeWidth="1.8"
       >
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7" />
-      </svg>
-    ),
-
-    marchandises: (
-      <svg
-        width="17"
-        height="17"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={couleur}
-        strokeWidth="1.8"
-      >
-        <rect x="4" y="7" width="16" height="13" rx="1" />
-        <path d="M4 11h16" />
-        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-      </svg>
-    ),
-
-    notifications: (
-      <svg
-        width="17"
-        height="17"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={couleur}
-        strokeWidth="1.8"
-      >
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M10 21h4" />
+        <path d="M3 12a9 9 0 1 0 3-6.7" />
+        <path d="M3 5v5h5" />
+        <path d="M12 7v5l3 2" />
       </svg>
     ),
 
@@ -125,31 +97,26 @@ function Icone({ type, active = false }) {
   return icones[type]
 }
 
-function AdminSidebar({
+function ChefMagasinierSidebar({
   pageActive = 'tableauDeBord',
   onNavigate,
   onDeconnexion,
 }) {
   const elementsMenu = [
     {
-      id: 'tableauDeBord',
-      libelle: 'Tableau de bord',
-      icone: 'tableauDeBord',
+      id: 'suiviDechargement',
+      libelle: 'Suivi du déchargement',
+      icone: 'suiviDechargement',
     },
     {
-      id: 'utilisateurs',
-      libelle: 'Utilisateurs',
-      icone: 'utilisateurs',
+      id: 'fichesJournalieres',
+      libelle: 'Fiche journalière',
+      icone: 'fichesJournalieres',
     },
     {
-      id: 'navires',
-      libelle: 'Navires',
-      icone: 'navires',
-    },
-    {
-      id: 'marchandises',
-      libelle: 'Produits',
-      icone: 'marchandises',
+      id: 'historique',
+      libelle: 'Historique des saisies',
+      icone: 'historique',
     },
     {
       id: 'profil',
@@ -165,7 +132,7 @@ function AdminSidebar({
 
   return (
     <aside
-      className="adm-sidebar"
+      className="cms-sidebar"
       style={{
         width: '220px',
         minWidth: '220px',
@@ -234,8 +201,8 @@ function AdminSidebar({
               type="button"
               className={
                 actif
-                  ? 'adm-menu-btn adm-menu-btn-actif'
-                  : 'adm-menu-btn'
+                  ? 'cms-menu-btn cms-menu-btn-actif'
+                  : 'cms-menu-btn'
               }
               onClick={() => {
                 if (onNavigate) {
@@ -304,7 +271,7 @@ function AdminSidebar({
       >
         <button
           type="button"
-          className="adm-logout-btn"
+          className="cms-logout-btn"
           onClick={() => {
             if (onDeconnexion) {
               onDeconnexion()
@@ -350,20 +317,20 @@ function AdminSidebar({
       </div>
 
       <style>{`
-        .adm-menu-btn {
+        .cms-menu-btn {
           transition: background 0.15s ease, transform 0.15s ease;
         }
 
-        .adm-menu-btn:not(.adm-menu-btn-actif):hover {
+        .cms-menu-btn:not(.cms-menu-btn-actif):hover {
           background: rgba(255,255,255,0.07) !important;
           transform: translateX(2px);
         }
 
-        .adm-logout-btn {
+        .cms-logout-btn {
           transition: background 0.15s ease, border-color 0.15s ease;
         }
 
-        .adm-logout-btn:hover {
+        .cms-logout-btn:hover {
           background: rgba(220,38,38,0.12) !important;
           border-color: rgba(248,113,113,0.35) !important;
         }
@@ -372,4 +339,4 @@ function AdminSidebar({
   )
 }
 
-export default AdminSidebar
+export default ChefMagasinierSidebar

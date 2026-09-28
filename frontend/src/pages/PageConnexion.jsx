@@ -102,23 +102,38 @@ function PageConnexion({ onConnexion }) {
 
       const donnees = await reponse.json()
 
+      console.log('Réponse login :', reponse.status, donnees)
+
       if (!reponse.ok) {
         setErreur(
-          donnees.message || 'Identifiant ou mot de passe incorrect.'
+          donnees.detail ||
+          donnees.message ||
+          'Identifiant ou mot de passe incorrect.'
         )
         return
       }
 
+      if (!donnees.token) {
+        setErreur('Le serveur a répondu sans envoyer de token.')
+        console.error('Réponse reçue sans token :', donnees)
+        return
+      }
+
       localStorage.setItem('token', donnees.token)
+
       localStorage.setItem(
         'utilisateur',
         JSON.stringify(donnees.utilisateur)
       )
 
+      console.log('Token enregistré :', donnees.token)
+
       if (onConnexion) {
         onConnexion(donnees)
       }
     } catch (error) {
+      console.error('Erreur de connexion :', error)
+
       setErreur(
         'Impossible de contacter le serveur. Vérifiez que Django est en cours d’exécution.'
       )
@@ -137,7 +152,6 @@ function PageConnexion({ onConnexion }) {
         boxSizing: 'border-box',
       }}
     >
-      {/* Image de fond */}
       <div
         style={{
           position: 'absolute',
@@ -150,7 +164,6 @@ function PageConnexion({ onConnexion }) {
         }}
       />
 
-      {/* Voile transparent */}
       <div
         style={{
           position: 'absolute',
@@ -159,7 +172,6 @@ function PageConnexion({ onConnexion }) {
         }}
       />
 
-      {/* Contenu */}
       <div
         style={{
           position: 'relative',
@@ -171,7 +183,6 @@ function PageConnexion({ onConnexion }) {
           boxSizing: 'border-box',
         }}
       >
-        {/* En-tête / Logo */}
         <header
           style={{
             width: '100%',
@@ -193,7 +204,6 @@ function PageConnexion({ onConnexion }) {
           />
         </header>
 
-        {/* Bloc central */}
         <div
           style={{
             flex: 1,
@@ -205,7 +215,6 @@ function PageConnexion({ onConnexion }) {
             boxSizing: 'border-box',
           }}
         >
-          {/* Badge */}
           <div
             style={{
               display: 'inline-flex',
@@ -242,7 +251,6 @@ function PageConnexion({ onConnexion }) {
             </span>
           </div>
 
-          {/* Carte */}
           <form
             onSubmit={gererConnexion}
             style={{
@@ -280,7 +288,6 @@ function PageConnexion({ onConnexion }) {
               Accédez à votre espace de gestion des opérations de déchargement
             </p>
 
-            {/* Identifiant */}
             <div style={{ marginBottom: '16px' }}>
               <label
                 style={{
@@ -332,7 +339,6 @@ function PageConnexion({ onConnexion }) {
               </div>
             </div>
 
-            {/* Mot de passe */}
             <div style={{ marginBottom: '10px' }}>
               <label
                 style={{
@@ -403,7 +409,6 @@ function PageConnexion({ onConnexion }) {
               </div>
             </div>
 
-            {/* Mot de passe oublié */}
             <div
               style={{
                 display: 'flex',
@@ -426,7 +431,6 @@ function PageConnexion({ onConnexion }) {
               </button>
             </div>
 
-            {/* Message d'erreur */}
             {erreur && (
               <div
                 style={{
@@ -440,7 +444,6 @@ function PageConnexion({ onConnexion }) {
               </div>
             )}
 
-            {/* Bouton connexion */}
             <button
               type="submit"
               disabled={connexionEnCours}
@@ -472,4 +475,3 @@ function PageConnexion({ onConnexion }) {
 }
 
 export default PageConnexion
-

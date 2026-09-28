@@ -7,6 +7,21 @@ function SupprimerUtilisateur({
     return null
   }
 
+  const confirmerSuppression = async () => {
+    try {
+      await onConfirm()
+
+      window.dispatchEvent(
+        new CustomEvent('utilisateurSupprime')
+      )
+    } catch (error) {
+      console.error(
+        'Erreur lors de la suppression de l’utilisateur :',
+        error
+      )
+    }
+  }
+
   return (
     <div
       style={{
@@ -35,7 +50,6 @@ function SupprimerUtilisateur({
           boxShadow: '0 8px 30px rgba(15, 41, 66, 0.15)',
         }}
       >
-        {/* Titre */}
         <h2
           style={{
             fontSize: '18px',
@@ -47,7 +61,6 @@ function SupprimerUtilisateur({
           Supprimer l'utilisateur ?
         </h2>
 
-        {/* Message */}
         <p
           style={{
             fontSize: '11px',
@@ -60,7 +73,6 @@ function SupprimerUtilisateur({
           compte suivant :
         </p>
 
-        {/* Utilisateur */}
         <div
           style={{
             display: 'flex',
@@ -118,7 +130,6 @@ function SupprimerUtilisateur({
           </div>
         </div>
 
-        {/* Avertissement */}
         <p
           style={{
             fontSize: '10px',
@@ -130,7 +141,6 @@ function SupprimerUtilisateur({
           Cette action est définitive et ne pourra pas être annulée.
         </p>
 
-        {/* Boutons */}
         <div
           style={{
             display: 'flex',
@@ -157,7 +167,7 @@ function SupprimerUtilisateur({
 
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={confirmerSuppression}
             style={{
               height: '34px',
               border: 'none',

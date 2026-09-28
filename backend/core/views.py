@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Q
 import re
 
@@ -6,6 +7,7 @@ from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    action,
 )
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -20,6 +22,8 @@ from .models import (
     Navire,
     Produit,
     ProduitNavire,
+    FicheJournaliere,
+    FicheProduit,
     DetailDechargement,
 )
 
@@ -29,6 +33,7 @@ from .serializers import (
     NavireSerializer,
     ProduitSerializer,
     ProduitNavireSerializer,
+    FicheJournaliereSerializer,
     DetailDechargementSerializer,
 )
 
@@ -61,51 +66,12 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def update(self, request, *args, **kwargs):
-        utilisateur = self.get_object()
-
-        if utilisateur.profil.nom_profil == 'Administrateur':
-            return Response(
-                {
-                    'detail': 'La modification d’un Administrateur est interdite.'
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        return super().update(request, *args, **kwargs)
-
-    def partial_update(self, request, *args, **kwargs):
-        utilisateur = self.get_object()
-
-        if utilisateur.profil.nom_profil == 'Administrateur':
-            return Response(
-                {
-                    'detail': 'La modification d’un Administrateur est interdite.'
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        return super().partial_update(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        utilisateur = self.get_object()
-
-        if utilisateur.profil.nom_profil == 'Administrateur':
-            return Response(
-                {
-                    'detail': 'La suppression d’un Administrateur est interdite.'
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        return super().destroy(request, *args, **kwargs)
-
 
 class NavireViewSet(viewsets.ModelViewSet):
     queryset = Navire.objects.all()
     serializer_class = NavireSerializer
     authentication_classes = [CustomTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsAdministrateur]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Navire.objects.all()
@@ -124,10 +90,8 @@ class NavireViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         nom = serializer.validated_data['nom_navire'].strip()
 
-        # Remplacer les espaces par des tirets
         nom_formate = re.sub(r'\s+', '-', nom)
 
-        # Récupérer tous les numéros déjà utilisés
         numeros_existants = Navire.objects.values_list(
             'numero_navire',
             flat=True
@@ -141,13 +105,11 @@ class NavireViewSet(viewsets.ModelViewSet):
             if match:
                 numeros_utilises.add(int(match.group(1)))
 
-        # Chercher le premier numéro disponible globalement
         compteur = 1
 
         while compteur in numeros_utilises:
             compteur += 1
 
-        # Numéro sur 5 chiffres
         numero = f"{nom_formate}-{compteur:05d}"
 
         serializer.save(numero_navire=numero)
@@ -169,7 +131,7 @@ class ProduitViewSet(viewsets.ModelViewSet):
     queryset = Produit.objects.all()
     serializer_class = ProduitSerializer
     authentication_classes = [CustomTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsAdministrateur]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Produit.objects.all()
@@ -186,13 +148,166 @@ class ProduitViewSet(viewsets.ModelViewSet):
 
 
 class ProduitNavireViewSet(viewsets.ModelViewSet):
-    queryset = ProduitNavire.objects.all()
+    queryset = ProduitNavire.objects.select_related(
+        'navire',
+        'produit'
+    ).all()
     serializer_class = ProduitNavireSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        produit_navire = self.get_object()
+
+        with transaction.atomic():
+            DetailDechargement.objects.filter(
+                produit_navire=produit_navire
+            ).delete()
+
+            FicheProduit.objects.filter(
+                produit_navire=produit_navire
+            ).delete()
+
+            produit_navire.delete()
+
+        return Response(
+            {
+                'message': 'Produit navire supprimé avec succès.'
+            },
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+class FicheJournaliereViewSet(viewsets.ModelViewSet):
+    queryset = FicheJournaliere.objects.select_related(
+        'navire'
+    ).prefetch_related(
+        'produits__produit_navire__produit'
+    ).all()
+
+    serializer_class = FicheJournaliereSerializer
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def destroy(self, request, *args, **kwargs):
+        fiche = self.get_object()
+
+        with transaction.atomic():
+            DetailDechargement.objects.filter(
+                fiche=fiche
+            ).delete()
+
+            FicheProduit.objects.filter(
+                fiche=fiche
+            ).delete()
+
+            fiche.delete()
+
+        return Response(
+            {
+                'message':
+                    'Le navire a été supprimé du suivi de la journée.'
+            },
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='soumettre'
+    )
+    def soumettre(self, request):
+        date_fiche = request.data.get('date_fiche')
+
+        if not date_fiche:
+            return Response(
+                {
+                    'detail':
+                        'La date de la fiche est obligatoire.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        fiches = FicheJournaliere.objects.filter(
+            date_fiche=date_fiche
+        )
+
+        if not fiches.exists():
+            return Response(
+                {
+                    'detail':
+                        'Aucun navire n’est présent dans le suivi de cette journée.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        fiches_non_soumises = fiches.filter(
+            soumise=False
+        )
+
+        if not fiches_non_soumises.exists():
+            return Response(
+                {
+                    'detail':
+                        'Le suivi de cette journée est déjà soumis.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            fiches.update(
+                soumise=True
+            )
+
+        fiches = FicheJournaliere.objects.select_related(
+            'navire'
+        ).prefetch_related(
+            'produits__produit_navire__produit'
+        ).filter(
+            date_fiche=date_fiche
+        )
+
+        serializer = self.get_serializer(
+            fiches,
+            many=True
+        )
+
+        return Response(
+            {
+                'message':
+                    'Le suivi de la journée a été soumis avec succès.',
+                'date_fiche':
+                    date_fiche,
+                'fiches':
+                    serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class DetailDechargementViewSet(viewsets.ModelViewSet):
-    queryset = DetailDechargement.objects.all()
+    queryset = DetailDechargement.objects.select_related(
+        'fiche',
+        'fiche__navire',
+        'produit_navire',
+        'produit_navire__produit'
+    ).all()
+
     serializer_class = DetailDechargementSerializer
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def destroy(self, request, *args, **kwargs):
+        detail = self.get_object()
+
+        if detail.fiche and detail.fiche.soumise:
+            return Response(
+                {
+                    'detail':
+                        'Cette fiche journalière a été soumise et ce détail ne peut plus être supprimé.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
 
 @api_view(['POST'])
@@ -228,7 +343,11 @@ def login(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
 
-    auth_token, created = AuthToken.objects.get_or_create(
+    AuthToken.objects.filter(
+        utilisateur=utilisateur
+    ).delete()
+
+    auth_token = AuthToken.objects.create(
         utilisateur=utilisateur
     )
 

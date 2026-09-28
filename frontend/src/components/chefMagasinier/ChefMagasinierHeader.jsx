@@ -16,8 +16,10 @@ function IconeNotification() {
   )
 }
 
-function AdminHeader({
-  initiales = 'AD',
+function ChefMagasinierHeader({
+  nom = 'Naili',
+  prenom = 'Oumeima',
+  initiales = 'ON',
 }) {
   return (
     <header
@@ -88,27 +90,41 @@ function AdminHeader({
           }}
         />
 
-        {/* Rôle */}
+        {/* Nom et prénom */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
             marginRight: '14px',
+            lineHeight: '1.2',
           }}
         >
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#101828',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {prenom} {nom}
+          </span>
+
           <span
             style={{
               fontSize: '10px',
               fontWeight: 700,
               color: '#344D66',
               whiteSpace: 'nowrap',
+              marginTop: '4px',
               letterSpacing: '0.06em',
               background: '#EEF3F9',
-              padding: '5px 10px',
+              padding: '3px 9px',
               borderRadius: '999px',
             }}
           >
-            ADMINISTRATEUR
+            CHEF MAGASINIER
           </span>
         </div>
 
@@ -153,4 +169,4 @@ function AdminHeader({
   )
 }
 
-export default AdminHeader
+export default ChefMagasinierHeader

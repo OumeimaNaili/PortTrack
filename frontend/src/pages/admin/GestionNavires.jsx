@@ -101,6 +101,7 @@ function GestionNavires({
   onModifierNavire,
   onSupprimerNavire,
   actualisation,
+  onDeconnexion,
 }) {
   const [recherche, setRecherche] = useState('')
   const [navires, setNavires] = useState([])
@@ -151,6 +152,7 @@ function GestionNavires({
       pageActive="navires"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{

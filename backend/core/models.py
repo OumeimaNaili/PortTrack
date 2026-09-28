@@ -87,9 +87,90 @@ class ProduitNavire(models.Model):
         max_digits=12,
         decimal_places=2
     )
+    tonnage_initial = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    actif = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.navire} - {self.produit}"
+
+
+class FicheJournaliere(models.Model):
+    date_fiche = models.DateField()
+
+    navire = models.ForeignKey(
+        Navire,
+        on_delete=models.PROTECT,
+        related_name='fiches_journalieres'
+    )
+
+    # Le numéro d'escale est mémorisé dans la fiche.
+    # Ainsi, si le numéro d'escale du navire change,
+    # les anciennes fiches gardent leur ancien numéro.
+    numero_escale = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    soumise = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['date_fiche', 'navire'],
+                name='unique_fiche_navire_date'
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.navire} - "
+            f"{self.numero_escale} - "
+            f"{self.date_fiche}"
+        )
+
+
+class FicheProduit(models.Model):
+    fiche = models.ForeignKey(
+        FicheJournaliere,
+        on_delete=models.PROTECT,
+        related_name='produits'
+    )
+
+    produit_navire = models.ForeignKey(
+        ProduitNavire,
+        on_delete=models.CASCADE,
+        related_name='fiches'
+    )
+
+    quantite_initiale = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    tonnage_initial = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['fiche', 'produit_navire'],
+                name='unique_fiche_produit'
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.fiche.navire} - "
+            f"{self.produit_navire.produit} - "
+            f"{self.fiche.date_fiche}"
+        )
 
 
 class DetailDechargement(models.Model):
@@ -106,7 +187,18 @@ class DetailDechargement(models.Model):
         (SHIFT_NUIT2, 'Nuit 2'),
     ]
 
-    date_dechargement = models.DateField()
+    date_dechargement = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    fiche = models.ForeignKey(
+        FicheJournaliere,
+        on_delete=models.PROTECT,
+        related_name='details_dechargement',
+        null=True,
+        blank=True
+    )
 
     produit_navire = models.ForeignKey(
         ProduitNavire,
@@ -124,13 +216,36 @@ class DetailDechargement(models.Model):
         decimal_places=2
     )
 
+    tonnage_decharge = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
     nombre_equipes = models.PositiveIntegerField()
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['fiche', 'produit_navire', 'shift'],
+                name='unique_detail_fiche_produit_shift'
+            )
+        ]
+
     def __str__(self):
+        if self.fiche:
+            return (
+                f"{self.fiche.navire} - "
+                f"{self.produit_navire.produit} - "
+                f"{self.fiche.date_fiche} - "
+                f"{self.shift}"
+            )
+
         return (
             f"{self.produit_navire.navire} - "
             f"{self.produit_navire.produit} - "
-            f"{self.date_dechargement}"
+            f"{self.date_dechargement} - "
+            f"{self.shift}"
         )
 
 

@@ -161,6 +161,7 @@ function GestionUtilisateurs({
   onModifier,
   onSupprimer,
   actualisation,
+  onDeconnexion,
 }) {
   const [recherche, setRecherche] = useState('')
   const [utilisateurs, setUtilisateurs] = useState([])
@@ -222,6 +223,22 @@ function GestionUtilisateurs({
     }
 
     chargerUtilisateurs()
+
+    const actualiserApresSuppression = () => {
+      chargerUtilisateurs()
+    }
+
+    window.addEventListener(
+      'utilisateurSupprime',
+      actualiserApresSuppression
+    )
+
+    return () => {
+      window.removeEventListener(
+        'utilisateurSupprime',
+        actualiserApresSuppression
+      )
+    }
   }, [actualisation, recherche])
 
   return (
@@ -229,6 +246,7 @@ function GestionUtilisateurs({
       pageActive="utilisateurs"
       nomAdministrateur="Nom admin"
       onNavigate={onNavigate}
+      onDeconnexion={onDeconnexion}
     >
       <div
         style={{
@@ -327,7 +345,6 @@ function GestionUtilisateurs({
               backgroundColor: '#FFFFFF',
             }}
           >
-            {/* Recherche */}
             <div
               style={{
                 position: 'relative',
@@ -370,7 +387,6 @@ function GestionUtilisateurs({
               />
             </div>
 
-            {/* Nombre d'utilisateurs */}
             <span
               style={{
                 fontSize: '11px',
@@ -598,55 +614,53 @@ function GestionUtilisateurs({
                     Consulter
                   </button>
 
-                  {utilisateur.profil !== 'Administrateur' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onModifier) {
-                            onModifier(utilisateur)
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          border: 'none',
-                          background: 'none',
-                          padding: 0,
-                          fontSize: '10px',
-                          color: '#536879',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <IconeModifier />
-                        Modifier
-                      </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onModifier) {
+                          onModifier(utilisateur)
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        border: 'none',
+                        background: 'none',
+                        padding: 0,
+                        fontSize: '10px',
+                        color: '#536879',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <IconeModifier />
+                      Modifier
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onSupprimer) {
-                            onSupprimer(utilisateur)
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          border: 'none',
-                          background: 'none',
-                          padding: 0,
-                          fontSize: '10px',
-                          color: '#D63C3C',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <IconeSupprimer />
-                        Supprimer
-                      </button>
-                    </>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSupprimer) {
+                          onSupprimer(utilisateur)
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        border: 'none',
+                        background: 'none',
+                        padding: 0,
+                        fontSize: '10px',
+                        color: '#D63C3C',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <IconeSupprimer />
+                      Supprimer
+                    </button>
+                  </>
                 </div>
               </div>
             ))
