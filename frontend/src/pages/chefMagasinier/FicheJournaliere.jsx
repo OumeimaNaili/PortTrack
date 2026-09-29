@@ -1490,6 +1490,7 @@ const BlocNavire = forwardRef(function BlocNavire({
 function FicheJournaliere({
   onNavigate,
   onDeconnexion,
+  dateFicheInitiale,
 }) {
   const [navires, setNavires] =
     useState([])
@@ -1607,6 +1608,14 @@ function FicheJournaliere({
       'application/json',
     Authorization: `Token ${token}`,
   }
+
+  useEffect(() => {
+  if (dateFicheInitiale) {
+    setDateFiche(dateFicheInitiale)
+    setMessageSoumission('')
+    setMessageErreurSoumission('')
+  }
+}, [dateFicheInitiale])
 
   useEffect(() => {
     chargerDonneesInitiales()

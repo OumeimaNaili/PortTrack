@@ -20,10 +20,10 @@ function IconeNotification() {
   )
 }
 
-function ChefMagasinierHeader({
-  nom = 'Naili',
-  prenom = 'Oumeima',
-  initiales = 'ON',
+function ResponsableOperationsHeader({
+  nom = 'Nom',
+  prenom = 'Prénom',
+  initiales = 'RO',
   onNavigate,
 }) {
   const [notifications, setNotifications] = useState([])
@@ -48,7 +48,7 @@ function ChefMagasinierHeader({
 
       if (!response.ok) {
         console.error(
-          `Erreur notifications Chef Magasinier : ${response.status} ${response.statusText}`
+          `Erreur notifications Responsable des Opérations : ${response.status} ${response.statusText}`
         )
         return
       }
@@ -216,7 +216,7 @@ function ChefMagasinierHeader({
               borderRadius: '999px',
             }}
           >
-            CHEF MAGASINIER
+            RESPONSABLE DES OPÉRATIONS
           </span>
         </div>
 
@@ -262,4 +262,4 @@ function ChefMagasinierHeader({
   )
 }
 
-export default ChefMagasinierHeader
+export default ResponsableOperationsHeader

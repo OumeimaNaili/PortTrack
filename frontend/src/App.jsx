@@ -19,9 +19,16 @@ import ConsulterProduit from './pages/admin/ConsulterProduit'
 import SupprimerProduit from './pages/admin/SupprimerProduit'
 
 import FicheJournaliere from './pages/chefMagasinier/FicheJournaliere'
+import HistoriqueSaisies from './pages/chefMagasinier/HistoriqueSaisies'
+import ValidationFiche from './pages/responsableOperations/ValidationFiche'
+import FichesParMois from './pages/responsableOperations/FichesParMois'
 
 import ChefMagasinierLayout from './components/chefMagasinier/ChefMagasinierLayout'
+import ResponsableOperationsLayout from './components/responsableOperations/ResponsableOperationsLayout'
 import ConfirmationDeconnexion from './components/ConfirmationDeconnexion'
+
+import PageNotifications from './pages/PageNotifications'
+import SuiviDechargement from './pages/SuiviDechargement'
 
 function App() {
   const [pageActive, setPageActive] = useState('accueil')
@@ -59,8 +66,17 @@ function App() {
   const [deconnexionDemandee, setDeconnexionDemandee] =
     useState(false)
 
-  const [pageChefMagasinier, setPageChefMagasinier] =
-    useState('tableauDeBord')
+    const [pageChefMagasinier, setPageChefMagasinier] =
+    useState('suiviDechargement')
+
+  const [pageResponsableOperations, setPageResponsableOperations] =
+    useState('suiviDechargement')
+
+  const [ficheSelectionneePourValidation, setFicheSelectionneePourValidation] =
+    useState(null)
+
+  const [dateFicheNotificationChef, setDateFicheNotificationChef] =
+    useState(null)
 
   useEffect(() => {
     const demanderDeconnexionDepuisSidebar = () => {
@@ -243,9 +259,15 @@ function App() {
 
     const profil = utilisateur?.profil?.nom_profil
 
-    if (profil === 'Chef Magasinier') {
-      setPageChefMagasinier('tableauDeBord')
+       if (profil === 'Chef Magasinier') {
+      setPageChefMagasinier('suiviDechargement')
       setPageActive('chefMagasinier')
+      return
+    }
+
+    if (profil === 'Responsable des Opérations') {
+      setPageResponsableOperations('suiviDechargement')
+      setPageActive('responsableOperations')
       return
     }
 
@@ -290,6 +312,28 @@ function App() {
     }
   }
 
+  const ouvrirFicheDepuisNotification = (notification) => {
+    const ficheId =
+      notification && typeof notification === 'object'
+        ? notification.fiche
+        : notification
+
+    setFicheSelectionneePourValidation(ficheId)
+    setPageResponsableOperations('validationFiche')
+  }
+
+  const ouvrirNotificationChef = (notification) => {
+    if (notification && typeof notification === 'object') {
+      setDateFicheNotificationChef(
+        notification.fiche_date || null
+      )
+    } else {
+      setDateFicheNotificationChef(null)
+    }
+
+    setPageChefMagasinier('fichesJournalieres')
+  }
+
   const afficherConfirmationDeconnexion = () => {
     if (!deconnexionDemandee) {
       return null
@@ -329,11 +373,20 @@ function App() {
         onNavigate={setPageChefMagasinier}
         onDeconnexion={demanderDeconnexion}
       >
-        {pageChefMagasinier === 'fichesJournalieres' ? (
+        {pageChefMagasinier === 'notifications' ? (
+          <PageNotifications
+            onNotificationClick={ouvrirNotificationChef}
+          />
+        ) : pageChefMagasinier === 'fichesJournalieres' ? (
           <FicheJournaliere
             onNavigate={setPageChefMagasinier}
             onDeconnexion={demanderDeconnexion}
+            dateFicheInitiale={dateFicheNotificationChef}
           />
+                ) : pageChefMagasinier === 'suiviDechargement' ? (
+          <SuiviDechargement />
+        ) : pageChefMagasinier === 'historique' ? (
+          <HistoriqueSaisies />
         ) : (
           <div>
             <h1
@@ -440,6 +493,158 @@ function App() {
           </div>
         )}
       </ChefMagasinierLayout>
+    )
+  }
+
+  /*
+   * ============================
+   * RESPONSABLE DES OPÉRATIONS
+   * ============================
+   */
+
+  if (pageActive === 'responsableOperations') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    const initiales = (
+      (utilisateurConnecte.prenom?.charAt(0) || '') +
+      (utilisateurConnecte.nom?.charAt(0) || '')
+    ).toUpperCase()
+
+    return (
+      <ResponsableOperationsLayout
+        pageActive={pageResponsableOperations}
+        nom={utilisateurConnecte.nom}
+        prenom={utilisateurConnecte.prenom}
+        initiales={initiales}
+        onNavigate={setPageResponsableOperations}
+        onDeconnexion={demanderDeconnexion}
+        onNotificationClick={ouvrirFicheDepuisNotification}
+      >
+        {pageResponsableOperations === 'notifications' ? (
+          <PageNotifications
+            onNotificationClick={ouvrirFicheDepuisNotification}
+          />
+        ) : pageResponsableOperations === 'validationFiche' ? (
+          <ValidationFiche
+            ficheId={ficheSelectionneePourValidation}
+            onNavigate={setPageResponsableOperations}
+            onDeconnexion={demanderDeconnexion}
+          />
+        ) : pageResponsableOperations === 'suiviDechargement' ? (
+          <SuiviDechargement />
+                ) : pageResponsableOperations === 'fichesParMois' ? (
+          <FichesParMois />
+        ) : pageResponsableOperations === 'profil' ? (
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                color: '#172F43',
+                fontSize: '24px',
+              }}
+            >
+              Mon profil
+            </h1>
+          </div>
+        ) : pageResponsableOperations === 'parametres' ? (
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                color: '#172F43',
+                fontSize: '24px',
+              }}
+            >
+              Paramètres
+            </h1>
+          </div>
+        ) : null}
+
+        {deconnexionDemandee && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2000,
+            }}
+          >
+            <div
+              style={{
+                width: '360px',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '8px',
+                padding: '24px',
+                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 10px',
+                  fontSize: '18px',
+                  color: '#172F43',
+                }}
+              >
+                Déconnexion
+              </h2>
+
+              <p
+                style={{
+                  margin: '0 0 22px',
+                  fontSize: '13px',
+                  color: '#6A7C92',
+                }}
+              >
+                Voulez-vous vraiment vous déconnecter ?
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={annulerDeconnexion}
+                  style={{
+                    padding: '9px 16px',
+                    border: '1px solid #D9E1E8',
+                    borderRadius: '5px',
+                    backgroundColor: '#FFFFFF',
+                    color: '#5F7388',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="button"
+                  onClick={gererDeconnexion}
+                  style={{
+                    padding: '9px 16px',
+                    border: 'none',
+                    borderRadius: '5px',
+                    backgroundColor: '#0F2942',
+                    color: '#FFFFFF',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Déconnexion
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </ResponsableOperationsLayout>
     )
   }
 

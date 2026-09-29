@@ -1,14 +1,15 @@
-import ChefMagasinierHeader from './ChefMagasinierHeader'
-import ChefMagasinierSidebar from './ChefMagasinierSidebar'
+import ResponsableOperationsHeader from './ResponsableOperationsHeader'
+import ResponsableOperationsSidebar from './ResponsableOperationsSidebar'
 
-function ChefMagasinierLayout({
+function ResponsableOperationsLayout({
   children,
-  pageActive = 'tableauDeBord',
+  pageActive = 'suiviDechargement',
   nom = 'Nom',
   prenom = 'Prénom',
-  initiales = 'CM',
+  initiales = 'RO',
   onNavigate,
   onDeconnexion,
+  onNotificationClick,
 }) {
   return (
     <div
@@ -29,7 +30,7 @@ function ChefMagasinierLayout({
           zIndex: 1000,
         }}
       >
-        <ChefMagasinierSidebar
+        <ResponsableOperationsSidebar
           pageActive={pageActive}
           onNavigate={onNavigate}
           onDeconnexion={onDeconnexion}
@@ -56,11 +57,12 @@ function ChefMagasinierLayout({
             zIndex: 999,
           }}
         >
-          <ChefMagasinierHeader
+          <ResponsableOperationsHeader
             nom={nom}
             prenom={prenom}
             initiales={initiales}
             onNavigate={onNavigate}
+            onNotificationClick={onNotificationClick}
           />
         </div>
 
@@ -82,4 +84,4 @@ function ChefMagasinierLayout({
   )
 }
 
-export default ChefMagasinierLayout
+export default ResponsableOperationsLayout

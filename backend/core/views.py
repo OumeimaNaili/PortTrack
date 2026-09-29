@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import Q
 import re
+import unicodedata
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import (
@@ -25,6 +26,8 @@ from .models import (
     FicheJournaliere,
     FicheProduit,
     DetailDechargement,
+    ValidationFiche,
+    Notification,
 )
 
 from .serializers import (
@@ -35,7 +38,42 @@ from .serializers import (
     ProduitNavireSerializer,
     FicheJournaliereSerializer,
     DetailDechargementSerializer,
+    ValidationFicheSerializer,
+    NotificationSerializer,
 )
+
+
+def normaliser_texte(texte):
+    texte = unicodedata.normalize('NFD', texte or '')
+    texte = ''.join(
+        caractere
+        for caractere in texte
+        if unicodedata.category(caractere) != 'Mn'
+    )
+    return ' '.join(texte.lower().split())
+
+
+def est_responsable_operations(utilisateur):
+    try:
+        nom_profil = utilisateur.profil.nom_profil
+    except Exception:
+        return False
+
+    return (
+        normaliser_texte(nom_profil)
+        == 'responsable des operations'
+    )
+
+
+def est_chef_magasinier(utilisateur):
+    try:
+        nom_profil = utilisateur.profil.nom_profil
+    except Exception:
+        return False
+
+    texte = normaliser_texte(nom_profil)
+
+    return 'chef' in texte and 'magasin' in texte
 
 
 class ProfilViewSet(viewsets.ModelViewSet):
@@ -153,6 +191,8 @@ class ProduitNavireViewSet(viewsets.ModelViewSet):
         'produit'
     ).all()
     serializer_class = ProduitNavireSerializer
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def destroy(self, request, *args, **kwargs):
         produit_navire = self.get_object()
@@ -226,6 +266,17 @@ class FicheJournaliereViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not est_chef_magasinier(request.user):
+            return Response(
+                {
+                    'detail':
+                        f'Seul le Chef Magasinier peut soumettre une fiche. '
+                        f'(compte reçu : {request.user.identifiant} - '
+                        f'{request.user.profil.nom_profil})'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         fiches = FicheJournaliere.objects.filter(
             date_fiche=date_fiche
         )
@@ -240,22 +291,67 @@ class FicheJournaliereViewSet(viewsets.ModelViewSet):
             )
 
         fiches_non_soumises = fiches.filter(
-            soumise=False
+            statut__in=[
+                FicheJournaliere.STATUT_BROUILLON,
+                FicheJournaliere.STATUT_REFUSEE,
+            ]
         )
 
         if not fiches_non_soumises.exists():
             return Response(
                 {
                     'detail':
-                        'Le suivi de cette journée est déjà soumis.'
+                        'Le suivi de cette journée est déjà soumis ou validé.'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         with transaction.atomic():
-            fiches.update(
-                soumise=True
+
+            fiches_a_soumettre = list(
+                fiches_non_soumises.select_related('navire')
             )
+
+            for fiche in fiches_a_soumettre:
+
+                fiche.soumise = True
+                fiche.statut = FicheJournaliere.STATUT_SOUMISE
+                fiche.motif_refus = None
+                fiche.save(
+                    update_fields=[
+                        'soumise',
+                        'statut',
+                        'motif_refus',
+                    ]
+                )
+
+            responsables = [
+                utilisateur
+                for utilisateur in Utilisateur.objects.select_related(
+                    'profil'
+                ).filter(
+                    actif=True
+                )
+                if est_responsable_operations(utilisateur)
+            ]
+
+            fiche_reference = fiches_a_soumettre[0]
+
+            nombre_navires = len(fiches_a_soumettre)
+
+            for responsable in responsables:
+                Notification.objects.create(
+                    utilisateur=responsable,
+                    fiche=fiche_reference,
+                    type_notification=Notification.TYPE_FICHE_SOUMISE,
+                    titre='Fiche journalière soumise',
+                    message=(
+                        f'La fiche journalière du '
+                        f'{date_fiche} a été soumise '
+                        f'et attend votre validation. '
+                        f'{nombre_navires} navire(s) sont concernés.'
+                    )
+                )
 
         fiches = FicheJournaliere.objects.select_related(
             'navire'
@@ -282,6 +378,225 @@ class FicheJournaliereViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='valider'
+    )
+    def valider(self, request, pk=None):
+        fiche = self.get_object()
+
+        if not est_responsable_operations(request.user):
+            return Response(
+                {
+                    'detail':
+                        'Seul le Responsable des Opérations peut valider une fiche.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if fiche.statut != FicheJournaliere.STATUT_SOUMISE:
+            return Response(
+                {
+                    'detail':
+                        'Cette fiche n’est pas en attente de validation.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+
+            fiches_du_jour = list(
+                FicheJournaliere.objects.select_related(
+                    'navire'
+                ).filter(
+                    date_fiche=fiche.date_fiche
+                )
+            )
+
+            for fiche_du_jour in fiches_du_jour:
+                fiche_du_jour.soumise = True
+                fiche_du_jour.statut = FicheJournaliere.STATUT_VALIDEE
+                fiche_du_jour.motif_refus = None
+                fiche_du_jour.save(
+                    update_fields=[
+                        'soumise',
+                        'statut',
+                        'motif_refus',
+                    ]
+                )
+
+                ValidationFiche.objects.create(
+                    fiche=fiche_du_jour,
+                    responsable=request.user,
+                    action=ValidationFiche.ACTION_VALIDEE,
+                    motif=None
+                )
+
+            chefs_magasiniers = [
+                utilisateur
+                for utilisateur in Utilisateur.objects.select_related(
+                    'profil'
+                ).filter(
+                    actif=True
+                )
+                if est_chef_magasinier(utilisateur)
+            ]
+
+            for chef_magasinier in chefs_magasiniers:
+                Notification.objects.create(
+                    utilisateur=chef_magasinier,
+                    fiche=fiche,
+                    type_notification=Notification.TYPE_FICHE_VALIDEE,
+                    titre='Fiche validée',
+                    message=(
+                        f'La fiche journalière du '
+                        f'{fiche.date_fiche} a été validée.'
+                    )
+                )
+
+        fiches_du_jour = FicheJournaliere.objects.select_related(
+            'navire'
+        ).prefetch_related(
+            'produits__produit_navire__produit'
+        ).filter(
+            date_fiche=fiche.date_fiche
+        )
+
+        serializer = self.get_serializer(
+            fiches_du_jour,
+            many=True
+        )
+
+        return Response(
+            {
+                'message':
+                    'La fiche a été validée avec succès.',
+                'date_fiche':
+                    fiche.date_fiche,
+                'fiches':
+                    serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='refuser'
+    )
+    def refuser(self, request, pk=None):
+        fiche = self.get_object()
+
+        if not est_responsable_operations(request.user):
+            return Response(
+                {
+                    'detail':
+                        'Seul le Responsable des Opérations peut refuser une fiche.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if fiche.statut != FicheJournaliere.STATUT_SOUMISE:
+            return Response(
+                {
+                    'detail':
+                        'Cette fiche n’est pas en attente de validation.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        motif_refus = request.data.get(
+            'motif_refus',
+            ''
+        ).strip()
+
+        if not motif_refus:
+            return Response(
+                {
+                    'motif_refus':
+                        'Le motif du refus est obligatoire.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+
+            fiches_du_jour = list(
+                FicheJournaliere.objects.select_related(
+                    'navire'
+                ).filter(
+                    date_fiche=fiche.date_fiche
+                )
+            )
+
+            for fiche_du_jour in fiches_du_jour:
+                fiche_du_jour.soumise = False
+                fiche_du_jour.statut = FicheJournaliere.STATUT_REFUSEE
+                fiche_du_jour.motif_refus = motif_refus
+                fiche_du_jour.save(
+                    update_fields=[
+                        'soumise',
+                        'statut',
+                        'motif_refus',
+                    ]
+                )
+
+                ValidationFiche.objects.create(
+                    fiche=fiche_du_jour,
+                    responsable=request.user,
+                    action=ValidationFiche.ACTION_REFUSEE,
+                    motif=motif_refus
+                )
+
+            chefs_magasiniers = [
+                utilisateur
+                for utilisateur in Utilisateur.objects.select_related(
+                    'profil'
+                ).filter(
+                    actif=True
+                )
+                if est_chef_magasinier(utilisateur)
+            ]
+
+            for chef_magasinier in chefs_magasiniers:
+                Notification.objects.create(
+                    utilisateur=chef_magasinier,
+                    fiche=fiche,
+                    type_notification=Notification.TYPE_FICHE_REFUSEE,
+                    titre='Fiche refusée',
+                    message=(
+                        f'La fiche journalière du '
+                        f'{fiche.date_fiche} a été refusée. '
+                        f'Motif : {motif_refus}'
+                    )
+                )
+
+        fiches_du_jour = FicheJournaliere.objects.select_related(
+            'navire'
+        ).prefetch_related(
+            'produits__produit_navire__produit'
+        ).filter(
+            date_fiche=fiche.date_fiche
+        )
+
+        serializer = self.get_serializer(
+            fiches_du_jour,
+            many=True
+        )
+
+        return Response(
+            {
+                'message':
+                    'La fiche a été refusée avec succès.',
+                'date_fiche':
+                    fiche.date_fiche,
+                'fiches':
+                    serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )
+
 
 class DetailDechargementViewSet(viewsets.ModelViewSet):
     queryset = DetailDechargement.objects.select_related(
@@ -298,16 +613,79 @@ class DetailDechargementViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         detail = self.get_object()
 
-        if detail.fiche and detail.fiche.soumise:
-            return Response(
-                {
-                    'detail':
-                        'Cette fiche journalière a été soumise et ce détail ne peut plus être supprimé.'
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
+        if detail.fiche:
+            if detail.fiche.statut == FicheJournaliere.STATUT_VALIDEE:
+                return Response(
+                    {
+                        'detail':
+                            'Cette fiche journalière a été validée et ce détail ne peut plus être supprimé.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if detail.fiche.statut == FicheJournaliere.STATUT_SOUMISE:
+                return Response(
+                    {
+                        'detail':
+                            'Cette fiche journalière est en attente de validation et ce détail ne peut pas être supprimé.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
         return super().destroy(request, *args, **kwargs)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.select_related(
+        'utilisateur',
+        'fiche',
+        'fiche__navire'
+    ).all()
+
+    serializer_class = NotificationSerializer
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.select_related(
+            'utilisateur',
+            'fiche',
+            'fiche__navire'
+        ).filter(
+            utilisateur=self.request.user
+        ).order_by(
+            '-date_creation'
+        )
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                'detail':
+                    'Les notifications sont créées automatiquement.'
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='lire'
+    )
+    def lire(self, request, pk=None):
+        notification = self.get_object()
+
+        notification.lue = True
+        notification.save(
+            update_fields=['lue']
+        )
+
+        return Response(
+            {
+                'message':
+                    'Notification marquée comme lue.'
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 @api_view(['POST'])
@@ -364,7 +742,7 @@ def login(request):
                 'profil': {
                     'id': utilisateur.profil.id,
                     'nom_profil': utilisateur.profil.nom_profil,
-                },
+                }
             }
         },
         status=status.HTTP_200_OK

@@ -99,6 +99,19 @@ class ProduitNavire(models.Model):
 
 
 class FicheJournaliere(models.Model):
+
+    STATUT_BROUILLON = 'BROUILLON'
+    STATUT_SOUMISE = 'SOUMISE'
+    STATUT_VALIDEE = 'VALIDEE'
+    STATUT_REFUSEE = 'REFUSEE'
+
+    STATUT_CHOICES = [
+        (STATUT_BROUILLON, 'Brouillon'),
+        (STATUT_SOUMISE, 'Soumise'),
+        (STATUT_VALIDEE, 'Validée'),
+        (STATUT_REFUSEE, 'Refusée'),
+    ]
+
     date_fiche = models.DateField()
 
     navire = models.ForeignKey(
@@ -117,6 +130,17 @@ class FicheJournaliere(models.Model):
     )
 
     soumise = models.BooleanField(default=False)
+
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default=STATUT_BROUILLON
+    )
+
+    motif_refus = models.TextField(
+        null=True,
+        blank=True
+    )
 
     class Meta:
         constraints = [
@@ -246,6 +270,110 @@ class DetailDechargement(models.Model):
             f"{self.produit_navire.produit} - "
             f"{self.date_dechargement} - "
             f"{self.shift}"
+        )
+
+
+class ValidationFiche(models.Model):
+
+    ACTION_VALIDEE = 'VALIDEE'
+    ACTION_REFUSEE = 'REFUSEE'
+
+    ACTION_CHOICES = [
+        (ACTION_VALIDEE, 'Validée'),
+        (ACTION_REFUSEE, 'Refusée'),
+    ]
+
+    fiche = models.ForeignKey(
+        FicheJournaliere,
+        on_delete=models.CASCADE,
+        related_name='historique_validations'
+    )
+
+    responsable = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.PROTECT,
+        related_name='validations_fiches'
+    )
+
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES
+    )
+
+    motif = models.TextField(
+        null=True,
+        blank=True
+    )
+
+    date_action = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return (
+            f"{self.fiche} - "
+            f"{self.action} - "
+            f"{self.responsable}"
+        )
+
+
+class Notification(models.Model):
+
+    TYPE_FICHE_SOUMISE = 'FICHE_SOUMISE'
+    TYPE_FICHE_VALIDEE = 'FICHE_VALIDEE'
+    TYPE_FICHE_REFUSEE = 'FICHE_REFUSEE'
+
+    TYPE_CHOICES = [
+        (
+            TYPE_FICHE_SOUMISE,
+            'Fiche soumise'
+        ),
+        (
+            TYPE_FICHE_VALIDEE,
+            'Fiche validée'
+        ),
+        (
+            TYPE_FICHE_REFUSEE,
+            'Fiche refusée'
+        ),
+    ]
+
+    utilisateur = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+
+    fiche = models.ForeignKey(
+        FicheJournaliere,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+
+    type_notification = models.CharField(
+        max_length=30,
+        choices=TYPE_CHOICES
+    )
+
+    titre = models.CharField(
+        max_length=255
+    )
+
+    message = models.TextField()
+
+    lue = models.BooleanField(
+        default=False
+    )
+
+    date_creation = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return (
+            f"{self.titre} - "
+            f"{self.utilisateur} - "
+            f"{self.fiche}"
         )
 
 

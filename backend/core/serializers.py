@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Sum
+
 from rest_framework import serializers
 
 from .models import (
@@ -11,6 +12,8 @@ from .models import (
     FicheJournaliere,
     FicheProduit,
     DetailDechargement,
+    ValidationFiche,
+    Notification,
 )
 
 
@@ -163,11 +166,19 @@ class DetailDechargementSerializer(serializers.ModelSerializer):
             )
         )
 
-        if fiche and fiche.soumise:
+        if fiche and fiche.statut == FicheJournaliere.STATUT_VALIDEE:
             raise serializers.ValidationError(
                 {
                     'detail':
-                        'Cette fiche journalière a été soumise et ne peut plus être modifiée.'
+                        'Cette fiche journalière a été validée et ne peut plus être modifiée.'
+                }
+            )
+
+        if fiche and fiche.statut == FicheJournaliere.STATUT_SOUMISE:
+            raise serializers.ValidationError(
+                {
+                    'detail':
+                        'Cette fiche journalière est en attente de validation et ne peut pas être modifiée.'
                 }
             )
 
@@ -412,21 +423,34 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
             'navire_nom',
             'numero_escale',
             'soumise',
+            'statut',
+            'motif_refus',
             'produits',
         ]
 
         read_only_fields = [
             'soumise',
+            'statut',
+            'motif_refus',
         ]
 
     def validate(self, attrs):
-        if self.instance and self.instance.soumise:
-            raise serializers.ValidationError(
-                {
-                    'detail':
-                        'Cette fiche journalière a été soumise et ne peut plus être modifiée.'
-                }
-            )
+        if self.instance:
+            if self.instance.statut == FicheJournaliere.STATUT_VALIDEE:
+                raise serializers.ValidationError(
+                    {
+                        'detail':
+                            'Cette fiche journalière a été validée et ne peut plus être modifiée.'
+                    }
+                )
+
+            if self.instance.statut == FicheJournaliere.STATUT_SOUMISE:
+                raise serializers.ValidationError(
+                    {
+                        'detail':
+                            'Cette fiche journalière est en attente de validation et ne peut pas être modifiée.'
+                    }
+                )
 
         navire = attrs.get(
             'navire',
@@ -480,9 +504,6 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
 
         navire = validated_data['navire']
 
-        # Mémoriser le numéro d'escale saisi par l'utilisateur pour cette
-        # fiche. On ne retombe sur le numéro d'escale du navire que si
-        # aucun numéro n'a été transmis par le client.
         numero_escale_saisi = validated_data.get('numero_escale')
 
         validated_data['numero_escale'] = (
@@ -528,11 +549,19 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        if instance.soumise:
+        if instance.statut == FicheJournaliere.STATUT_VALIDEE:
             raise serializers.ValidationError(
                 {
                     'detail':
-                        'Cette fiche journalière a été soumise et ne peut plus être modifiée.'
+                        'Cette fiche journalière a été validée et ne peut plus être modifiée.'
+                }
+            )
+
+        if instance.statut == FicheJournaliere.STATUT_SOUMISE:
+            raise serializers.ValidationError(
+                {
+                    'detail':
+                        'Cette fiche journalière est en attente de validation et ne peut pas être modifiée.'
                 }
             )
 
@@ -551,9 +580,6 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
             instance.navire
         )
 
-        # On respecte le numéro d'escale envoyé par le client s'il y en a
-        # un. Sinon, on conserve celui déjà mémorisé, ou à défaut celui
-        # du navire.
         numero_escale_saisi = validated_data.get('numero_escale')
 
         if numero_escale_saisi:
@@ -563,6 +589,7 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
                 instance.navire.numero_escale
             )
 
+        instance.motif_refus = None
         instance.save()
 
         if produits_data is not None:
@@ -599,3 +626,58 @@ class FicheJournaliereSerializer(serializers.ModelSerializer):
                 )
 
         return instance
+
+
+class ValidationFicheSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ValidationFiche
+        fields = [
+            'id',
+            'fiche',
+            'responsable',
+            'action',
+            'motif',
+            'date_action',
+        ]
+        read_only_fields = [
+            'id',
+            'fiche',
+            'responsable',
+            'date_action',
+        ]
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    fiche_navire = serializers.CharField(
+        source='fiche.navire.nom_navire',
+        read_only=True
+    )
+
+    fiche_date = serializers.DateField(
+        source='fiche.date_fiche',
+        read_only=True
+    )
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'fiche',
+            'fiche_navire',
+            'fiche_date',
+            'type_notification',
+            'titre',
+            'message',
+            'lue',
+            'date_creation',
+        ]
+        read_only_fields = [
+            'id',
+            'fiche',
+            'fiche_navire',
+            'fiche_date',
+            'type_notification',
+            'titre',
+            'message',
+            'date_creation',
+        ]
