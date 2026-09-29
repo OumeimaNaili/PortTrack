@@ -109,7 +109,7 @@ function GestionNavires({
   useEffect(() => {
     const chargerNavires = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
 
         const url =
           recherche.trim() === ''

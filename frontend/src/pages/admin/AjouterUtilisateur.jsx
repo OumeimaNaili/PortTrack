@@ -76,7 +76,7 @@ function AjouterUtilisateur({
   useEffect(() => {
     const genererIdentifiant = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
 
         const response = await fetch(
           'http://127.0.0.1:8000/api/utilisateurs/',
@@ -165,7 +165,7 @@ function AjouterUtilisateur({
       'Responsable des Statistiques': 5,
     }
 
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     try {
       const response = await fetch(

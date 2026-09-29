@@ -316,16 +316,18 @@ function TableauJour({ jour }) {
   )
 }
 
-function FichesParMois() {
+function FichesParMois({ lectureSeule = false, moisInitial = null }) {
   const [fiches, setFiches] = useState([])
   const [details, setDetails] = useState([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
-  const [moisChoisi, setMoisChoisi] = useState('')
+  const [moisChoisi, setMoisChoisi] = useState(moisInitial || '')
+  const [soumissionMois, setSoumissionMois] = useState(false)
+  const [messageMois, setMessageMois] = useState(null)
 
   useEffect(() => {
     const charger = async () => {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
 
       if (!token) {
         setErreur('Aucun token de connexion trouvé.')
@@ -446,6 +448,59 @@ function FichesParMois() {
     URL.revokeObjectURL(url)
   }
 
+  const soumettreMois = async () => {
+    if (!moisAffiche) {
+      return
+    }
+
+    const token = sessionStorage.getItem('token')
+
+    setSoumissionMois(true)
+    setMessageMois(null)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/fiches-journalieres/soumettre-mois/`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ mois: moisAffiche.cle }),
+        }
+      )
+
+      let data = {}
+
+      try {
+        data = await response.json()
+      } catch (error) {
+        data = {}
+      }
+
+      if (!response.ok) {
+        setMessageMois({
+          type: 'erreur',
+          texte: data.detail || 'Impossible de soumettre le mois.',
+        })
+        return
+      }
+
+      setMessageMois({
+        type: 'succes',
+        texte: 'Le mois a été soumis avec succès.',
+      })
+    } catch (error) {
+      setMessageMois({
+        type: 'erreur',
+        texte: 'Erreur de connexion au serveur.',
+      })
+    } finally {
+      setSoumissionMois(false)
+    }
+  }
+
   return (
     <div>
       {/* En-tête */}
@@ -487,26 +542,30 @@ function FichesParMois() {
               flexWrap: 'wrap',
             }}
           >
-            <select
-              value={moisAffiche ? moisAffiche.cle : ''}
-              onChange={(e) => setMoisChoisi(e.target.value)}
-              style={{
-                padding: '10px 14px',
-                border: '1px solid #D0D5DD',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#172F43',
-                background: '#FFFFFF',
-              }}
-            >
-              {listeMois.map((element) => (
-                <option key={element.cle} value={element.cle}>
-                  {libelleMois(element.cle)}
-                </option>
-              ))}
-            </select>
-
+                        {!lectureSeule && (
+              <select
+                value={moisAffiche ? moisAffiche.cle : ''}
+                onChange={(e) => {
+                  setMoisChoisi(e.target.value)
+                  setMessageMois(null)
+                }}
+                style={{
+                  padding: '10px 14px',
+                  border: '1px solid #D0D5DD',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#172F43',
+                  background: '#FFFFFF',
+                }}
+              >
+                {listeMois.map((element) => (
+                  <option key={element.cle} value={element.cle}>
+                    {libelleMois(element.cle)}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               type="button"
               onClick={exporterExcel}
@@ -525,7 +584,7 @@ function FichesParMois() {
             </button>
           </div>
         )}
-        
+
       </div>
 
       {erreur && (
@@ -576,6 +635,58 @@ function FichesParMois() {
           {moisAffiche.jours.map((jour) => (
             <TableauJour key={jour.date} jour={jour} />
           ))}
+
+          {!lectureSeule && messageMois && (
+            <div
+              style={{
+                marginBottom: '14px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                textAlign: 'center',
+                background:
+                  messageMois.type === 'succes' ? '#EAFaf0' : '#FDECEC',
+                color:
+                  messageMois.type === 'succes' ? '#16803A' : '#B42318',
+                border:
+                  messageMois.type === 'succes'
+                    ? '1px solid #B7E4C7'
+                    : '1px solid #F5C2C0',
+              }}
+            >
+              {messageMois.texte}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: lectureSeule ? 'none' : 'flex',
+              justifyContent: 'center',
+              marginBottom: '30px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={soumettreMois}
+              disabled={soumissionMois}
+              style={{
+                padding: '13px 34px',
+                border: 'none',
+                borderRadius: '9px',
+                background: '#172F43',
+                color: '#FFFFFF',
+                cursor: soumissionMois ? 'not-allowed' : 'pointer',
+                opacity: soumissionMois ? 0.7 : 1,
+                fontWeight: 700,
+                fontSize: '15px',
+                letterSpacing: '0.03em',
+                boxShadow: '0 1px 3px rgba(16,24,40,0.2)',
+              }}
+            >
+              {soumissionMois ? 'Soumission...' : 'SOUMETTRE'}
+            </button>
+          </div>
         </>
       )}
     </div>

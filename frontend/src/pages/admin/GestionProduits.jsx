@@ -108,7 +108,7 @@ function GestionProduits({
   useEffect(() => {
     const chargerProduits = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
 
         const url =
           recherche.trim() === ''

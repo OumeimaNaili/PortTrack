@@ -205,7 +205,7 @@ function ValidationFiche({
   }
 
   const chargerFiche = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       setErreur('Aucun token de connexion trouvé.')
@@ -333,7 +333,7 @@ function ValidationFiche({
   }, [ficheId])
 
   const validerFiche = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       return
@@ -403,7 +403,7 @@ function ValidationFiche({
       return
     }
 
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       return

@@ -112,7 +112,7 @@ const BlocNavire = forwardRef(function BlocNavire({
   const [messageSuccesTableau, setMessageSuccesTableau] =
     useState('')
 
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
 
   const headers = {
     'Content-Type': 'application/json',
@@ -1601,7 +1601,7 @@ function FicheJournaliere({
   const blocRefs = useRef({})
 
   const token =
-    localStorage.getItem('token')
+    sessionStorage.getItem('token')
 
   const headers = {
     'Content-Type':

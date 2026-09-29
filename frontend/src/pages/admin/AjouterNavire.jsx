@@ -93,7 +93,7 @@ function AjouterNavire({ onNavigate, onDeconnexion }) {
       }
 
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
 
         const response = await fetch(
           'http://127.0.0.1:8000/api/navires/',
@@ -159,7 +159,7 @@ function AjouterNavire({ onNavigate, onDeconnexion }) {
     setMessage('')
     setMessageType('')
 
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     try {
       const response = await fetch(

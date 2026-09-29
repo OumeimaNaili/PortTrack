@@ -20,10 +20,10 @@ function IconeNotification() {
   )
 }
 
-function ResponsableOperationsHeader({
+function DirecteurHeader({
   nom = 'Nom',
   prenom = 'Prénom',
-  initiales = 'RO',
+  initiales = 'DI',
   onNavigate,
 }) {
   const [notifications, setNotifications] = useState([])
@@ -32,7 +32,6 @@ function ResponsableOperationsHeader({
     const token = sessionStorage.getItem('token')
 
     if (!token) {
-      console.error('Aucun token trouvé pour charger les notifications.')
       return
     }
 
@@ -47,9 +46,6 @@ function ResponsableOperationsHeader({
       })
 
       if (!response.ok) {
-        console.error(
-          `Erreur notifications Responsable des Opérations : ${response.status} ${response.statusText}`
-        )
         return
       }
 
@@ -216,7 +212,7 @@ function ResponsableOperationsHeader({
               borderRadius: '999px',
             }}
           >
-            RESPONSABLE DES OPÉRATIONS
+            DIRECTEUR
           </span>
         </div>
 
@@ -262,4 +258,4 @@ function ResponsableOperationsHeader({
   )
 }
 
-export default ResponsableOperationsHeader
+export default DirecteurHeader

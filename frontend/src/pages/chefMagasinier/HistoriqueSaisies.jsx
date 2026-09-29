@@ -3,7 +3,7 @@ import TableauFiche from '../../components/chefMagasinier/TableauFiche'
 
 const API_URL = 'http://127.0.0.1:8000/api'
 
-const construireTableau = (fiche, details) => {
+const construireTableau = (fiche, details, toutesFiches) => {
   const produits = (fiche.produits || []).map((produit) => ({
     key: String(produit.produit_navire),
     label: produit.designation,
@@ -40,6 +40,17 @@ const construireTableau = (fiche, details) => {
       shifts[cle].nbrEquipes = Number(detail.nombre_equipes || 0)
     })
 
+  // Fiches de la même escale, jusqu'à la date de cette fiche (incluse).
+  // Les fiches des jours suivants ne sont pas comptées : les valeurs
+  // de l'historique restent donc figées.
+  const fichesJusquaCetteDate = toutesFiches.filter(
+    (element) =>
+      Number(element.navire) === Number(fiche.navire) &&
+      String(element.numero_escale || '').trim() ===
+        String(fiche.numero_escale || '').trim() &&
+      element.date_fiche <= fiche.date_fiche
+  )
+
   const totalJour = { quantite: {}, tonnage: {} }
   const totalDech = { quantite: {}, tonnage: {} }
   const resteABord = { quantite: {}, tonnage: {} }
@@ -57,17 +68,44 @@ const construireTableau = (fiche, details) => {
       (element) => String(element.produit_navire) === produit.key
     )
 
-    totalDech.quantite[produit.key] = Number(
-      produitFiche?.total_decharge_quantite || 0
+    let cumulQuantite = 0
+    let cumulTonnage = 0
+
+    fichesJusquaCetteDate.forEach((ficheEscale) => {
+      const produitEscale = (ficheEscale.produits || []).find(
+        (element) =>
+          Number(element.produit_id) === Number(produitFiche?.produit_id)
+      )
+
+      if (!produitEscale) {
+        return
+      }
+
+      details
+        .filter(
+          (detail) =>
+            Number(detail.fiche) === Number(ficheEscale.id) &&
+            Number(detail.produit_navire) ===
+              Number(produitEscale.produit_navire)
+        )
+        .forEach((detail) => {
+          cumulQuantite += Number(detail.quantite_dechargee || 0)
+          cumulTonnage += Number(detail.tonnage_decharge || 0)
+        })
+    })
+
+    const manifesteQuantite = Number(produitFiche?.quantite_manifeste || 0)
+    const manifesteTonnage = Number(produitFiche?.tonnage_manifeste || 0)
+
+    totalDech.quantite[produit.key] = cumulQuantite
+    totalDech.tonnage[produit.key] = cumulTonnage
+    resteABord.quantite[produit.key] = Math.max(
+      0,
+      manifesteQuantite - cumulQuantite
     )
-    totalDech.tonnage[produit.key] = Number(
-      produitFiche?.total_decharge_tonnage || 0
-    )
-    resteABord.quantite[produit.key] = Number(
-      produitFiche?.reste_a_bord_quantite || 0
-    )
-    resteABord.tonnage[produit.key] = Number(
-      produitFiche?.reste_a_bord_tonnage || 0
+    resteABord.tonnage[produit.key] = Math.max(
+      0,
+      manifesteTonnage - cumulTonnage
     )
   })
 
@@ -127,7 +165,7 @@ function HistoriqueSaisies() {
 
   useEffect(() => {
     const charger = async () => {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
 
       if (!token) {
         setErreur('Aucun token de connexion trouvé.')
@@ -440,7 +478,7 @@ function HistoriqueSaisies() {
               {ouvert && (
                 <div style={{ marginTop: '22px' }}>
                   {jour.fiches.map((fiche, index) => {
-                    const tableau = construireTableau(fiche, details)
+                    const tableau = construireTableau(fiche, details, fiches)
 
                     return (
                       <div key={fiche.id} style={{ marginBottom: '26px' }}>

@@ -29,7 +29,7 @@ function ChefMagasinierHeader({
   const [notifications, setNotifications] = useState([])
 
   const chargerNotifications = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       console.error('Aucun token trouvé pour charger les notifications.')

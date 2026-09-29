@@ -322,6 +322,7 @@ class Notification(models.Model):
     TYPE_FICHE_SOUMISE = 'FICHE_SOUMISE'
     TYPE_FICHE_VALIDEE = 'FICHE_VALIDEE'
     TYPE_FICHE_REFUSEE = 'FICHE_REFUSEE'
+    TYPE_MOIS_SOUMIS = 'MOIS_SOUMIS'
 
     TYPE_CHOICES = [
         (
@@ -335,6 +336,10 @@ class Notification(models.Model):
         (
             TYPE_FICHE_REFUSEE,
             'Fiche refusée'
+        ),
+        (
+            TYPE_MOIS_SOUMIS,
+            'Mois soumis'
         ),
     ]
 

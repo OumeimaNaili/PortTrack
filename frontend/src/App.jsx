@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import PageAccueil from './pages/PageAccueil'
 import PageConnexion from './pages/PageConnexion'
+import PageProfil from './pages/PageProfil'
 
 import AdminDashboard from './pages/admin/AdminDashboard'
 import GestionUtilisateurs from './pages/admin/GestionUtilisateurs'
@@ -23,9 +24,12 @@ import HistoriqueSaisies from './pages/chefMagasinier/HistoriqueSaisies'
 import ValidationFiche from './pages/responsableOperations/ValidationFiche'
 import FichesParMois from './pages/responsableOperations/FichesParMois'
 
+import AdminLayout from './components/admin/AdminLayout'
 import ChefMagasinierLayout from './components/chefMagasinier/ChefMagasinierLayout'
 import ResponsableOperationsLayout from './components/responsableOperations/ResponsableOperationsLayout'
 import ConfirmationDeconnexion from './components/ConfirmationDeconnexion'
+import DirecteurLayout from './components/directeur/DirecteurLayout'
+import ResponsableStatistiquesLayout from './components/responsableStatistiques/ResponsableStatistiquesLayout'
 
 import PageNotifications from './pages/PageNotifications'
 import SuiviDechargement from './pages/SuiviDechargement'
@@ -72,6 +76,15 @@ function App() {
   const [pageResponsableOperations, setPageResponsableOperations] =
     useState('suiviDechargement')
 
+  const [pageDirecteur, setPageDirecteur] =
+    useState('suiviDechargement')
+
+  const [pageResponsableStatistiques, setPageResponsableStatistiques] =
+    useState('suiviDechargement')
+
+  const [moisNotificationDirecteur, setMoisNotificationDirecteur] =
+    useState(null)
+
   const [ficheSelectionneePourValidation, setFicheSelectionneePourValidation] =
     useState(null)
 
@@ -116,7 +129,7 @@ function App() {
     }
 
     try {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
 
       const response = await fetch(
         `http://127.0.0.1:8000/api/utilisateurs/${utilisateurASupprimer.id}/`,
@@ -200,7 +213,7 @@ function App() {
     }
 
     try {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
 
       const response = await fetch(
         `http://127.0.0.1:8000/api/produits/${produitASupprimer.id}/`,
@@ -271,6 +284,18 @@ function App() {
       return
     }
 
+    if (profil === 'Directeur') {
+      setPageDirecteur('suiviDechargement')
+      setPageActive('directeur')
+      return
+    }
+
+    if (profil === 'Responsable des Statistiques') {
+      setPageResponsableStatistiques('suiviDechargement')
+      setPageActive('responsableStatistiques')
+      return
+    }
+
     setPageActive('tableauDeBord')
   }
 
@@ -283,7 +308,7 @@ function App() {
   }
 
   const gererDeconnexion = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     try {
       if (token) {
@@ -303,8 +328,8 @@ function App() {
         error
       )
     } finally {
-      localStorage.removeItem('token')
-      localStorage.removeItem('utilisateur')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('utilisateur')
 
       setUtilisateurConnecte(null)
       setDeconnexionDemandee(false)
@@ -332,6 +357,18 @@ function App() {
     }
 
     setPageChefMagasinier('fichesJournalieres')
+  }
+
+  const ouvrirNotificationDirecteur = (notification) => {
+    const moisNotification =
+      notification &&
+      typeof notification === 'object' &&
+      notification.fiche_date
+        ? notification.fiche_date.slice(0, 7)
+        : null
+
+    setMoisNotificationDirecteur(moisNotification)
+    setPageDirecteur('fichesParMois')
   }
 
   const afficherConfirmationDeconnexion = () => {
@@ -387,6 +424,8 @@ function App() {
           <SuiviDechargement />
         ) : pageChefMagasinier === 'historique' ? (
           <HistoriqueSaisies />
+        ) : pageChefMagasinier === 'profil' ? (
+          <PageProfil utilisateur={utilisateurConnecte} />
         ) : (
           <div>
             <h1
@@ -538,17 +577,7 @@ function App() {
                 ) : pageResponsableOperations === 'fichesParMois' ? (
           <FichesParMois />
         ) : pageResponsableOperations === 'profil' ? (
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                color: '#172F43',
-                fontSize: '24px',
-              }}
-            >
-              Mon profil
-            </h1>
-          </div>
+          <PageProfil utilisateur={utilisateurConnecte} />
         ) : pageResponsableOperations === 'parametres' ? (
           <div>
             <h1
@@ -645,6 +674,113 @@ function App() {
           </div>
         )}
       </ResponsableOperationsLayout>
+    )
+  }
+
+  /*
+   * ============================
+   * DIRECTEUR
+   * ============================
+   */
+
+  if (pageActive === 'directeur') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    const initiales = (
+      (utilisateurConnecte.prenom?.charAt(0) || '') +
+      (utilisateurConnecte.nom?.charAt(0) || '')
+    ).toUpperCase()
+
+    return (
+      <DirecteurLayout
+        pageActive={pageDirecteur}
+        nom={utilisateurConnecte.nom}
+        prenom={utilisateurConnecte.prenom}
+        initiales={initiales}
+        onNavigate={setPageDirecteur}
+        onDeconnexion={demanderDeconnexion}
+      >
+        {pageDirecteur === 'notifications' ? (
+          <PageNotifications
+            onNotificationClick={ouvrirNotificationDirecteur}
+          />
+        ) : pageDirecteur === 'fichesParMois' ? (
+          <FichesParMois
+            lectureSeule
+            moisInitial={moisNotificationDirecteur}
+          />
+        ) : pageDirecteur === 'suiviDechargement' ? (
+          <SuiviDechargement />
+        ) : pageDirecteur === 'profil' ? (
+          <PageProfil utilisateur={utilisateurConnecte} />
+        ) : pageDirecteur === 'parametres' ? (
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                color: '#172F43',
+                fontSize: '24px',
+              }}
+            >
+              Paramètres
+            </h1>
+          </div>
+        ) : null}
+
+        {afficherConfirmationDeconnexion()}
+      </DirecteurLayout>
+    )
+  }
+
+  /*
+   * ============================
+   * RESPONSABLE DES STATISTIQUES
+   * ============================
+   */
+
+  if (pageActive === 'responsableStatistiques') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    const initiales = (
+      (utilisateurConnecte.prenom?.charAt(0) || '') +
+      (utilisateurConnecte.nom?.charAt(0) || '')
+    ).toUpperCase()
+
+    return (
+      <ResponsableStatistiquesLayout
+        pageActive={pageResponsableStatistiques}
+        nom={utilisateurConnecte.nom}
+        prenom={utilisateurConnecte.prenom}
+        initiales={initiales}
+        onNavigate={setPageResponsableStatistiques}
+        onDeconnexion={demanderDeconnexion}
+      >
+        {pageResponsableStatistiques === 'suiviDechargement' ? (
+          <SuiviDechargement />
+        ) : pageResponsableStatistiques === 'profil' ? (
+          <PageProfil utilisateur={utilisateurConnecte} />
+        ) : pageResponsableStatistiques === 'parametres' ? (
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                color: '#172F43',
+                fontSize: '24px',
+              }}
+            >
+              Paramètres
+            </h1>
+          </div>
+        ) : null}
+
+        {afficherConfirmationDeconnexion()}
+      </ResponsableStatistiquesLayout>
     )
   }
 
@@ -845,6 +981,28 @@ function App() {
           onNavigate={setPageActive}
           onDeconnexion={demanderDeconnexion}
         />
+
+        {afficherConfirmationDeconnexion()}
+      </>
+    )
+  }
+
+  if (pageActive === 'profil') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    return (
+      <>
+        <AdminLayout
+          pageActive="profil"
+          nomAdministrateur={`${utilisateurConnecte.prenom || ''} ${utilisateurConnecte.nom || ''}`.trim()}
+          onNavigate={setPageActive}
+          onDeconnexion={demanderDeconnexion}
+        >
+          <PageProfil utilisateur={utilisateurConnecte} />
+        </AdminLayout>
 
         {afficherConfirmationDeconnexion()}
       </>

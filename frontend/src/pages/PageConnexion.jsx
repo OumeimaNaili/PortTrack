@@ -119,9 +119,9 @@ function PageConnexion({ onConnexion }) {
         return
       }
 
-      localStorage.setItem('token', donnees.token)
+      sessionStorage.setItem('token', donnees.token)
 
-      localStorage.setItem(
+      sessionStorage.setItem(
         'utilisateur',
         JSON.stringify(donnees.utilisateur)
       )

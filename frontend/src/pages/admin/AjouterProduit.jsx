@@ -27,7 +27,7 @@ function AjouterProduit({ onNavigate, onDeconnexion }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     try {
       const response = await fetch(

@@ -274,7 +274,7 @@ function SuiviDechargement() {
   const [erreur, setErreur] = useState('')
 
   const chargerDonnees = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       setErreur('Aucun token de connexion trouvé.')

@@ -12,7 +12,7 @@ function PageNotifications({ onNotificationClick }) {
     useState(false)
 
   const chargerNotifications = async () => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       setErreur('Aucun token de connexion trouvé.')
@@ -67,7 +67,7 @@ function PageNotifications({ onNotificationClick }) {
   }, [])
 
   const marquerCommeLue = async (notification) => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token || notification.lue) {
       return
@@ -127,7 +127,7 @@ function PageNotifications({ onNotificationClick }) {
       return
     }
 
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     if (!token) {
       setErreur('Aucun token de connexion trouvé.')

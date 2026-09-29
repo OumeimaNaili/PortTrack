@@ -76,6 +76,15 @@ def est_chef_magasinier(utilisateur):
     return 'chef' in texte and 'magasin' in texte
 
 
+def est_directeur(utilisateur):
+    try:
+        nom_profil = utilisateur.profil.nom_profil
+    except Exception:
+        return False
+
+    return normaliser_texte(nom_profil) == 'directeur'
+
+
 class ProfilViewSet(viewsets.ModelViewSet):
     queryset = Profil.objects.all()
     serializer_class = ProfilSerializer
@@ -374,6 +383,85 @@ class FicheJournaliereViewSet(viewsets.ModelViewSet):
                     date_fiche,
                 'fiches':
                     serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='soumettre-mois'
+    )
+    def soumettre_mois(self, request):
+        if not est_responsable_operations(request.user):
+            return Response(
+                {
+                    'detail':
+                        'Seul le Responsable des Opérations peut soumettre un mois.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        mois = str(request.data.get('mois') or '')
+
+        try:
+            annee = int(mois[:4])
+            numero_mois = int(mois[5:7])
+        except ValueError:
+            return Response(
+                {
+                    'detail':
+                        'Le mois est invalide (format attendu : AAAA-MM).'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        fiches = FicheJournaliere.objects.filter(
+            date_fiche__year=annee,
+            date_fiche__month=numero_mois,
+            statut__in=[
+                FicheJournaliere.STATUT_SOUMISE,
+                FicheJournaliere.STATUT_VALIDEE,
+            ]
+        ).order_by('-date_fiche')
+
+        if not fiches.exists():
+            return Response(
+                {
+                    'detail':
+                        'Aucune fiche soumise ou validée pour ce mois.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        fiche_reference = fiches.first()
+
+        directeurs = [
+            utilisateur
+            for utilisateur in Utilisateur.objects.select_related(
+                'profil'
+            ).filter(
+                actif=True
+            )
+            if est_directeur(utilisateur)
+        ]
+
+        with transaction.atomic():
+            for directeur in directeurs:
+                Notification.objects.create(
+                    utilisateur=directeur,
+                    fiche=fiche_reference,
+                    type_notification=Notification.TYPE_MOIS_SOUMIS,
+                    titre='Fiches du mois soumises',
+                    message=(
+                        f'Le Responsable des Opérations a soumis '
+                        f'les fiches du mois {mois}.'
+                    )
+                )
+
+        return Response(
+            {
+                'message': 'Le mois a été soumis avec succès.'
             },
             status=status.HTTP_200_OK
         )
