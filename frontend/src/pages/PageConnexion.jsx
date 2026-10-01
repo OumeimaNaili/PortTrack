@@ -75,7 +75,7 @@ function IconeConnexion() {
   )
 }
 
-function PageConnexion({ onConnexion }) {
+function PageConnexion({ onConnexion, onMotDePasseOublie }) {
   const [identifiant, setIdentifiant] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
   const [motDePasseVisible, setMotDePasseVisible] = useState(false)
@@ -418,6 +418,7 @@ function PageConnexion({ onConnexion }) {
             >
               <button
                 type="button"
+                onClick={onMotDePasseOublie}
                 style={{
                   border: 'none',
                   background: 'none',

@@ -1399,24 +1399,6 @@ const BlocNavire = forwardRef(function BlocNavire({
                 Tableau non modifiable
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setAfficherConfirmationSuppression(true)
-                }
-                style={{
-                  padding: '11px 24px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: '#B42318',
-                  color: '#FFFFFF',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  boxShadow: '0 1px 2px rgba(16,24,40,0.08)',
-                }}
-              >
-                Supprimer
-              </button>
             </div>
           ) : (
             

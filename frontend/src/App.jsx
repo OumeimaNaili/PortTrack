@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import PageAccueil from './pages/PageAccueil'
 import PageConnexion from './pages/PageConnexion'
 import PageProfil from './pages/PageProfil'
+import PageParametres from './pages/PageParametres'
+import PageModifierProfil from './pages/PageModifierProfil'
+import PageModifierMotDePasse from './pages/PageModifierMotDePasse'
+import PageMotDePasseOublie from './pages/PageMotDePasseOublie'
 
 import AdminDashboard from './pages/admin/AdminDashboard'
 import GestionUtilisateurs from './pages/admin/GestionUtilisateurs'
@@ -307,6 +311,15 @@ function App() {
     setDeconnexionDemandee(false)
   }
 
+  const mettreAJourUtilisateur = (utilisateurMisAJour) => {
+    setUtilisateurConnecte(utilisateurMisAJour)
+
+    sessionStorage.setItem(
+      'utilisateur',
+      JSON.stringify(utilisateurMisAJour)
+    )
+  }
+
   const gererDeconnexion = async () => {
     const token = sessionStorage.getItem('token')
 
@@ -426,6 +439,16 @@ function App() {
           <HistoriqueSaisies />
         ) : pageChefMagasinier === 'profil' ? (
           <PageProfil utilisateur={utilisateurConnecte} />
+        ) : pageChefMagasinier === 'parametres' ? (
+          <PageParametres onNavigate={setPageChefMagasinier} />
+        ) : pageChefMagasinier === 'modifierProfil' ? (
+          <PageModifierProfil
+            utilisateur={utilisateurConnecte}
+            onNavigate={setPageChefMagasinier}
+            onProfilMisAJour={mettreAJourUtilisateur}
+          />
+        ) : pageChefMagasinier === 'modifierMotDePasse' ? (
+          <PageModifierMotDePasse onNavigate={setPageChefMagasinier} />
         ) : (
           <div>
             <h1
@@ -579,17 +602,15 @@ function App() {
         ) : pageResponsableOperations === 'profil' ? (
           <PageProfil utilisateur={utilisateurConnecte} />
         ) : pageResponsableOperations === 'parametres' ? (
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                color: '#172F43',
-                fontSize: '24px',
-              }}
-            >
-              Paramètres
-            </h1>
-          </div>
+          <PageParametres onNavigate={setPageResponsableOperations} />
+        ) : pageResponsableOperations === 'modifierProfil' ? (
+          <PageModifierProfil
+            utilisateur={utilisateurConnecte}
+            onNavigate={setPageResponsableOperations}
+            onProfilMisAJour={mettreAJourUtilisateur}
+          />
+        ) : pageResponsableOperations === 'modifierMotDePasse' ? (
+          <PageModifierMotDePasse onNavigate={setPageResponsableOperations} />
         ) : null}
 
         {deconnexionDemandee && (
@@ -717,17 +738,15 @@ function App() {
         ) : pageDirecteur === 'profil' ? (
           <PageProfil utilisateur={utilisateurConnecte} />
         ) : pageDirecteur === 'parametres' ? (
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                color: '#172F43',
-                fontSize: '24px',
-              }}
-            >
-              Paramètres
-            </h1>
-          </div>
+          <PageParametres onNavigate={setPageDirecteur} />
+        ) : pageDirecteur === 'modifierProfil' ? (
+          <PageModifierProfil
+            utilisateur={utilisateurConnecte}
+            onNavigate={setPageDirecteur}
+            onProfilMisAJour={mettreAJourUtilisateur}
+          />
+        ) : pageDirecteur === 'modifierMotDePasse' ? (
+          <PageModifierMotDePasse onNavigate={setPageDirecteur} />
         ) : null}
 
         {afficherConfirmationDeconnexion()}
@@ -766,17 +785,15 @@ function App() {
         ) : pageResponsableStatistiques === 'profil' ? (
           <PageProfil utilisateur={utilisateurConnecte} />
         ) : pageResponsableStatistiques === 'parametres' ? (
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                color: '#172F43',
-                fontSize: '24px',
-              }}
-            >
-              Paramètres
-            </h1>
-          </div>
+          <PageParametres onNavigate={setPageResponsableStatistiques} />
+        ) : pageResponsableStatistiques === 'modifierProfil' ? (
+          <PageModifierProfil
+            utilisateur={utilisateurConnecte}
+            onNavigate={setPageResponsableStatistiques}
+            onProfilMisAJour={mettreAJourUtilisateur}
+          />
+        ) : pageResponsableStatistiques === 'modifierMotDePasse' ? (
+          <PageModifierMotDePasse onNavigate={setPageResponsableStatistiques} />
         ) : null}
 
         {afficherConfirmationDeconnexion()}
@@ -821,6 +838,15 @@ function App() {
     return (
       <PageConnexion
         onConnexion={gererConnexion}
+        onMotDePasseOublie={() => setPageActive('motDePasseOublie')}
+      />
+    )
+  }
+
+  if (pageActive === 'motDePasseOublie') {
+    return (
+      <PageMotDePasseOublie
+        onNavigate={setPageActive}
       />
     )
   }
@@ -981,6 +1007,76 @@ function App() {
           onNavigate={setPageActive}
           onDeconnexion={demanderDeconnexion}
         />
+
+        {afficherConfirmationDeconnexion()}
+      </>
+    )
+  }
+
+  if (pageActive === 'modifierMotDePasse') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    return (
+      <>
+        <AdminLayout
+          pageActive="parametres"
+          nomAdministrateur={`${utilisateurConnecte.prenom || ''} ${utilisateurConnecte.nom || ''}`.trim()}
+          onNavigate={setPageActive}
+          onDeconnexion={demanderDeconnexion}
+        >
+          <PageModifierMotDePasse onNavigate={setPageActive} />
+        </AdminLayout>
+
+        {afficherConfirmationDeconnexion()}
+      </>
+    )
+  }
+
+  if (pageActive === 'modifierProfil') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    return (
+      <>
+        <AdminLayout
+          pageActive="parametres"
+          nomAdministrateur={`${utilisateurConnecte.prenom || ''} ${utilisateurConnecte.nom || ''}`.trim()}
+          onNavigate={setPageActive}
+          onDeconnexion={demanderDeconnexion}
+        >
+          <PageModifierProfil
+            utilisateur={utilisateurConnecte}
+            onNavigate={setPageActive}
+            onProfilMisAJour={mettreAJourUtilisateur}
+          />
+        </AdminLayout>
+
+        {afficherConfirmationDeconnexion()}
+      </>
+    )
+  }
+
+  if (pageActive === 'parametres') {
+    if (!utilisateurConnecte) {
+      setPageActive('connexion')
+      return null
+    }
+
+    return (
+      <>
+        <AdminLayout
+          pageActive="parametres"
+          nomAdministrateur={`${utilisateurConnecte.prenom || ''} ${utilisateurConnecte.nom || ''}`.trim()}
+          onNavigate={setPageActive}
+          onDeconnexion={demanderDeconnexion}
+        >
+          <PageParametres onNavigate={setPageActive} />
+        </AdminLayout>
 
         {afficherConfirmationDeconnexion()}
       </>

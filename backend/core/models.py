@@ -406,3 +406,34 @@ class AuthToken(models.Model):
 
     def __str__(self):
         return f"Token - {self.utilisateur.identifiant}"
+
+
+class CodeReinitialisation(models.Model):
+    utilisateur = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.CASCADE,
+        related_name='codes_reinitialisation'
+    )
+
+    # Le code à 6 chiffres est stocké haché, jamais en clair.
+    code = models.CharField(
+        max_length=255
+    )
+
+    date_creation = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    tentatives = models.PositiveIntegerField(
+        default=0
+    )
+
+    utilise = models.BooleanField(
+        default=False
+    )
+
+    def __str__(self):
+        return (
+            f"Code - {self.utilisateur.identifiant} - "
+            f"{self.date_creation}"
+        )

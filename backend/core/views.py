@@ -1,6 +1,15 @@
 from django.db import transaction
 from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.conf import settings
+from django.core.mail import send_mail
+from django.contrib.auth.hashers import make_password, check_password
+from django.utils import timezone
+from datetime import timedelta
+import logging
 import re
+import secrets
 import unicodedata
 
 from rest_framework import viewsets, status
@@ -11,7 +20,7 @@ from rest_framework.decorators import (
     action,
 )
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .authentication import CustomTokenAuthentication
 from .permissions import IsAdministrateur
@@ -28,6 +37,7 @@ from .models import (
     DetailDechargement,
     ValidationFiche,
     Notification,
+    CodeReinitialisation,
 )
 
 from .serializers import (
@@ -164,7 +174,26 @@ class NavireViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         navire = self.get_object()
 
-        self.perform_destroy(navire)
+        with transaction.atomic():
+            DetailDechargement.objects.filter(
+                Q(fiche__navire=navire) |
+                Q(produit_navire__navire=navire)
+            ).delete()
+
+            FicheProduit.objects.filter(
+                Q(fiche__navire=navire) |
+                Q(produit_navire__navire=navire)
+            ).delete()
+
+            FicheJournaliere.objects.filter(
+                navire=navire
+            ).delete()
+
+            ProduitNavire.objects.filter(
+                navire=navire
+            ).delete()
+
+            navire.delete()
 
         return Response(
             {
@@ -192,6 +221,31 @@ class ProduitViewSet(viewsets.ModelViewSet):
             )
 
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        produit = self.get_object()
+
+        with transaction.atomic():
+            DetailDechargement.objects.filter(
+                produit_navire__produit=produit
+            ).delete()
+
+            FicheProduit.objects.filter(
+                produit_navire__produit=produit
+            ).delete()
+
+            ProduitNavire.objects.filter(
+                produit=produit
+            ).delete()
+
+            produit.delete()
+
+        return Response(
+            {
+                'message': 'Produit supprimé avec succès.'
+            },
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 class ProduitNavireViewSet(viewsets.ModelViewSet):
@@ -888,3 +942,284 @@ def dashboard(request):
         'nombre_comptes_actifs': nombre_comptes_actifs,
         'utilisateurs': utilisateurs_data,
     })
+
+
+@api_view(['PATCH'])
+@authentication_classes([CustomTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def mon_profil(request):
+    utilisateur = request.user
+
+    email = str(request.data.get('email') or '').strip()
+
+    if not email:
+        return Response(
+            {'email': 'L’email est obligatoire.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        validate_email(email)
+    except ValidationError:
+        return Response(
+            {'email': 'Veuillez saisir une adresse email valide.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if Utilisateur.objects.filter(
+        email__iexact=email
+    ).exclude(pk=utilisateur.pk).exists():
+        return Response(
+            {'email': 'Cet email est déjà utilisé.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Seul l'email peut être modifié par l'utilisateur connecté.
+    utilisateur.email = email
+    utilisateur.save(update_fields=['email'])
+
+    return Response(
+        {
+            'message': 'Email modifié avec succès.',
+            'utilisateur': {
+                'id': utilisateur.id,
+                'identifiant': utilisateur.identifiant,
+                'nom': utilisateur.nom,
+                'prenom': utilisateur.prenom,
+                'email': utilisateur.email,
+                'profil': {
+                    'id': utilisateur.profil.id,
+                    'nom_profil': utilisateur.profil.nom_profil,
+                }
+            }
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['POST'])
+@authentication_classes([CustomTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def changer_mot_de_passe(request):
+    utilisateur = request.user
+
+    ancien = request.data.get('ancien_mot_de_passe') or ''
+    nouveau = request.data.get('nouveau_mot_de_passe') or ''
+    confirmation = request.data.get('confirmation') or ''
+
+    erreurs = {}
+
+    if not utilisateur.check_password(ancien):
+        erreurs['ancien_mot_de_passe'] = (
+            'Le mot de passe actuel est incorrect.'
+        )
+
+    if len(nouveau) < 8:
+        erreurs['nouveau_mot_de_passe'] = (
+            'Le nouveau mot de passe doit contenir au moins 8 caractères.'
+        )
+    elif nouveau == ancien:
+        erreurs['nouveau_mot_de_passe'] = (
+            'Le nouveau mot de passe doit être différent de l’ancien.'
+        )
+
+    if nouveau != confirmation:
+        erreurs['confirmation'] = (
+            'La confirmation ne correspond pas au nouveau mot de passe.'
+        )
+
+    if erreurs:
+        return Response(
+            erreurs,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    utilisateur.set_password(nouveau)
+    utilisateur.save(update_fields=['mot_de_passe'])
+
+    return Response(
+        {
+            'message': 'Mot de passe modifié avec succès.'
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+DUREE_VALIDITE_CODE_MINUTES = 10
+NOMBRE_MAX_TENTATIVES_CODE = 5
+DELAI_RENVOI_CODE_SECONDES = 60
+
+
+def trouver_utilisateur_par_identifiant_ou_email(valeur):
+    valeur = str(valeur or '').strip()
+
+    if not valeur:
+        return None
+
+    return Utilisateur.objects.select_related('profil').filter(
+        Q(identifiant__iexact=valeur) | Q(email__iexact=valeur),
+        actif=True
+    ).first()
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def mot_de_passe_oublie(request):
+    # Réponse identique que le compte existe ou non,
+    # pour ne pas révéler quels comptes existent.
+    reponse_generique = Response(
+        {
+            'message':
+                'Si un compte correspond à cette saisie, un code à '
+                '6 chiffres vient d’être envoyé à son adresse email.'
+        },
+        status=status.HTTP_200_OK
+    )
+
+    utilisateur = trouver_utilisateur_par_identifiant_ou_email(
+        request.data.get('identifiant_ou_email')
+    )
+
+    if utilisateur is None:
+        return reponse_generique
+
+    dernier_code = CodeReinitialisation.objects.filter(
+        utilisateur=utilisateur
+    ).order_by('-date_creation').first()
+
+    if dernier_code and (
+        timezone.now() - dernier_code.date_creation
+        < timedelta(seconds=DELAI_RENVOI_CODE_SECONDES)
+    ):
+        return reponse_generique
+
+    code = f"{secrets.randbelow(1000000):06d}"
+
+    CodeReinitialisation.objects.filter(
+        utilisateur=utilisateur,
+        utilise=False
+    ).update(utilise=True)
+
+    code_reinitialisation = CodeReinitialisation.objects.create(
+        utilisateur=utilisateur,
+        code=make_password(code)
+    )
+
+    try:
+        send_mail(
+            subject='PortTrack - Code de réinitialisation du mot de passe',
+            message=(
+                f'Bonjour {utilisateur.prenom} {utilisateur.nom},\n\n'
+                f'Votre code de réinitialisation est : {code}\n\n'
+                f'Ce code est valable {DUREE_VALIDITE_CODE_MINUTES} minutes.\n'
+                f'Si vous n’êtes pas à l’origine de cette demande, '
+                f'ignorez ce message.\n\n'
+                f'PortTrack'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[utilisateur.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logging.getLogger(__name__).exception(
+            'Échec de l’envoi du code de réinitialisation.'
+        )
+
+        code_reinitialisation.delete()
+
+        return Response(
+            {
+                'detail':
+                    'Impossible d’envoyer l’email pour le moment. '
+                    'Réessayez plus tard.'
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    return reponse_generique
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def reinitialiser_mot_de_passe(request):
+    code = str(request.data.get('code') or '').strip()
+    nouveau = request.data.get('nouveau_mot_de_passe') or ''
+    confirmation = request.data.get('confirmation') or ''
+
+    erreurs = {}
+
+    if len(nouveau) < 8:
+        erreurs['nouveau_mot_de_passe'] = (
+            'Le nouveau mot de passe doit contenir au moins 8 caractères.'
+        )
+
+    if nouveau != confirmation:
+        erreurs['confirmation'] = (
+            'La confirmation ne correspond pas au nouveau mot de passe.'
+        )
+
+    if erreurs:
+        return Response(
+            erreurs,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    erreur_code = Response(
+        {'code': 'Code incorrect ou expiré. Demandez un nouveau code.'},
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+    utilisateur = trouver_utilisateur_par_identifiant_ou_email(
+        request.data.get('identifiant_ou_email')
+    )
+
+    if utilisateur is None:
+        return erreur_code
+
+    limite = timezone.now() - timedelta(
+        minutes=DUREE_VALIDITE_CODE_MINUTES
+    )
+
+    code_reinitialisation = CodeReinitialisation.objects.filter(
+        utilisateur=utilisateur,
+        utilise=False,
+        date_creation__gte=limite
+    ).order_by('-date_creation').first()
+
+    if code_reinitialisation is None:
+        return erreur_code
+
+    if code_reinitialisation.tentatives >= NOMBRE_MAX_TENTATIVES_CODE:
+        code_reinitialisation.utilise = True
+        code_reinitialisation.save(update_fields=['utilise'])
+
+        return Response(
+            {'code': 'Trop de tentatives. Demandez un nouveau code.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not check_password(code, code_reinitialisation.code):
+        code_reinitialisation.tentatives += 1
+        code_reinitialisation.save(update_fields=['tentatives'])
+
+        return erreur_code
+
+    with transaction.atomic():
+        utilisateur.set_password(nouveau)
+        utilisateur.save(update_fields=['mot_de_passe'])
+
+        code_reinitialisation.utilise = True
+        code_reinitialisation.save(update_fields=['utilise'])
+
+        AuthToken.objects.filter(
+            utilisateur=utilisateur
+        ).delete()
+
+    return Response(
+        {
+            'message': 'Mot de passe réinitialisé avec succès.'
+        },
+        status=status.HTTP_200_OK
+    )

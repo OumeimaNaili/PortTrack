@@ -26,6 +26,14 @@ from .views import (
 
     dashboard,
 
+    mon_profil,
+
+    changer_mot_de_passe,
+
+    mot_de_passe_oublie,
+
+    reinitialiser_mot_de_passe,
+
 )
 
 
@@ -55,6 +63,14 @@ urlpatterns = [
     path('logout/', logout, name='logout'),
 
     path('dashboard/', dashboard, name='dashboard'),
+
+    path('mon-profil/', mon_profil, name='mon_profil'),
+
+    path('changer-mot-de-passe/', changer_mot_de_passe, name='changer_mot_de_passe'),
+
+    path('mot-de-passe-oublie/', mot_de_passe_oublie, name='mot_de_passe_oublie'),
+
+    path('reinitialiser-mot-de-passe/', reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe'),
 
 ]
 
