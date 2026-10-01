@@ -89,7 +89,7 @@ function PageConnexion({ onConnexion, onMotDePasseOublie }) {
     setConnexionEnCours(true)
 
     try {
-      const reponse = await fetch('${import.meta.env.VITE_API_URL}/login/', {
+      const reponse = await fetch(`${import.meta.env.VITE_API_URL}/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
