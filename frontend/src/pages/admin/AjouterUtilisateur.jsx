@@ -79,7 +79,7 @@ function AjouterUtilisateur({
         const token = sessionStorage.getItem('token')
 
         const response = await fetch(
-          '${import.meta.env.VITE_API_URL}/utilisateurs/',
+          `${import.meta.env.VITE_API_URL}/utilisateurs/`,
           {
             method: 'GET',
             headers: {
@@ -169,7 +169,7 @@ function AjouterUtilisateur({
 
     try {
       const response = await fetch(
-        '${import.meta.env.VITE_API_URL}/utilisateurs/',
+        `${import.meta.env.VITE_API_URL}/utilisateurs/`,
         {
           method: 'POST',
           headers: {

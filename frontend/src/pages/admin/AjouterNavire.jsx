@@ -96,7 +96,7 @@ function AjouterNavire({ onNavigate, onDeconnexion }) {
         const token = sessionStorage.getItem('token')
 
         const response = await fetch(
-          '${import.meta.env.VITE_API_URL}/navires/',
+          `${import.meta.env.VITE_API_URL}/navires/`,
           {
             method: 'GET',
             headers: {
@@ -163,7 +163,7 @@ function AjouterNavire({ onNavigate, onDeconnexion }) {
 
     try {
       const response = await fetch(
-        '${import.meta.env.VITE_API_URL}/navires/',
+        `${import.meta.env.VITE_API_URL}/navires/`,
         {
           method: 'POST',
           headers: {

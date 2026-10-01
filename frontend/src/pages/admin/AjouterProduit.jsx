@@ -31,7 +31,7 @@ function AjouterProduit({ onNavigate, onDeconnexion }) {
 
     try {
       const response = await fetch(
-        '${import.meta.env.VITE_API_URL}/produits/',
+        `${import.meta.env.VITE_API_URL}/produits/`,
         {
           method: 'POST',
           headers: {
