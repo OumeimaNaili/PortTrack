@@ -3,7 +3,7 @@ import FicheHeader from '../../components/chefMagasinier/FicheHeader'
 import TableauFiche from '../../components/chefMagasinier/TableauFiche'
 import ConfirmationSuppression from '../../components/chefMagasinier/ConfirmationSuppression'
 
-const API_URL = 'http://127.0.0.1:8000/api'
+const API_URL = import.meta.env.VITE_API_URL
 
 const getDateAujourdhui = () => {
   const aujourdHui = new Date()
