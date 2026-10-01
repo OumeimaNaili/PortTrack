@@ -112,7 +112,7 @@ function GestionProduits({
 
         const url =
           recherche.trim() === ''
-            ? '${import.meta.env.VITE_API_URL}/produits/'
+            ? `${import.meta.env.VITE_API_URL}/produits/`
             : `${import.meta.env.VITE_API_URL}/produits/?search=${encodeURIComponent(
                 recherche.trim()
               )}`

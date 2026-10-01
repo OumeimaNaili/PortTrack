@@ -113,7 +113,7 @@ function GestionNavires({
 
         const url =
           recherche.trim() === ''
-            ? '${import.meta.env.VITE_API_URL}/navires/'
+            ? `${import.meta.env.VITE_API_URL}/navires/`
             : `${import.meta.env.VITE_API_URL}/navires/?search=${encodeURIComponent(
                 recherche.trim()
               )}`

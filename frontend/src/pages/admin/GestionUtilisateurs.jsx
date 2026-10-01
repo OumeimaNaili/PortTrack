@@ -173,7 +173,7 @@ function GestionUtilisateurs({
 
         const url =
           recherche.trim() === ''
-            ? '${import.meta.env.VITE_API_URL}/utilisateurs/'
+            ? `${import.meta.env.VITE_API_URL}/utilisateurs/`
             : `${import.meta.env.VITE_API_URL}/utilisateurs/?search=${encodeURIComponent(
                 recherche.trim()
               )}`
