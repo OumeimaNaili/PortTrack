@@ -113,8 +113,8 @@ function GestionNavires({
 
         const url =
           recherche.trim() === ''
-            ? 'http://127.0.0.1:8000/api/navires/'
-            : `http://127.0.0.1:8000/api/navires/?search=${encodeURIComponent(
+            ? '${import.meta.env.VITE_API_URL}/navires/'
+            : `${import.meta.env.VITE_API_URL}/navires/?search=${encodeURIComponent(
                 recherche.trim()
               )}`
 

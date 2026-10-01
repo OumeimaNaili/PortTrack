@@ -136,7 +136,7 @@ function App() {
       const token = sessionStorage.getItem('token')
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/utilisateurs/${utilisateurASupprimer.id}/`,
+        `${import.meta.env.VITE_API_URL}/utilisateurs/${utilisateurASupprimer.id}/`,
         {
           method: 'DELETE',
           headers: {
@@ -220,7 +220,7 @@ function App() {
       const token = sessionStorage.getItem('token')
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/produits/${produitASupprimer.id}/`,
+        `${import.meta.env.VITE_API_URL}/produits/${produitASupprimer.id}/`,
         {
           method: 'DELETE',
           headers: {
@@ -326,7 +326,7 @@ function App() {
     try {
       if (token) {
         await fetch(
-          'http://127.0.0.1:8000/api/logout/',
+          '${import.meta.env.VITE_API_URL}/logout/',
           {
             method: 'POST',
             headers: {

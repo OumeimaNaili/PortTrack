@@ -112,8 +112,8 @@ function GestionProduits({
 
         const url =
           recherche.trim() === ''
-            ? 'http://127.0.0.1:8000/api/produits/'
-            : `http://127.0.0.1:8000/api/produits/?search=${encodeURIComponent(
+            ? '${import.meta.env.VITE_API_URL}/produits/'
+            : `${import.meta.env.VITE_API_URL}/produits/?search=${encodeURIComponent(
                 recherche.trim()
               )}`
 

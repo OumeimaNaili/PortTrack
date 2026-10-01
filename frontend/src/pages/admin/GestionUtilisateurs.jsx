@@ -173,8 +173,8 @@ function GestionUtilisateurs({
 
         const url =
           recherche.trim() === ''
-            ? 'http://127.0.0.1:8000/api/utilisateurs/'
-            : `http://127.0.0.1:8000/api/utilisateurs/?search=${encodeURIComponent(
+            ? '${import.meta.env.VITE_API_URL}/utilisateurs/'
+            : `${import.meta.env.VITE_API_URL}/utilisateurs/?search=${encodeURIComponent(
                 recherche.trim()
               )}`
 

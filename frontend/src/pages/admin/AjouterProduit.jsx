@@ -31,7 +31,7 @@ function AjouterProduit({ onNavigate, onDeconnexion }) {
 
     try {
       const response = await fetch(
-        'http://127.0.0.1:8000/api/produits/',
+        '${import.meta.env.VITE_API_URL}/produits/',
         {
           method: 'POST',
           headers: {

@@ -46,7 +46,7 @@ function ModifierUtilisateur({
       const token = sessionStorage.getItem('token')
 
       const response = await fetch(
-        `http://127.0.0.1:8000/api/utilisateurs/${utilisateur.id}/`,
+        `${import.meta.env.VITE_API_URL}/utilisateurs/${utilisateur.id}/`,
         {
           method: 'PATCH',
           headers: {
